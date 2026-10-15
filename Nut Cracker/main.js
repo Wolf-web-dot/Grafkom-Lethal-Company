@@ -46,7 +46,6 @@ function generateEllipsoid(a, b, c, stack, step, color) {
             var y = b * Math.sin(u);
             var z = c * Math.sin(v) * Math.cos(u);
 
-            // uv equirectangular: depan (+Z) ada di u = 0.75
             pushVertex(
                 vertices, x, y, z,
                 x / (a * a), y / (b * b), z / (c * c),
@@ -116,7 +115,7 @@ function generateCylinder(r, h, slices, color, arcStart, arcEnd) {
     return { vertices, faces };
 }
 
-// CONE 
+// CONE / CONE TERPOTONG 
 function generateCone(rBottom, rTop, h, slices, color) {
     var vertices = [];
     var faces = [];
@@ -160,6 +159,7 @@ function generateCone(rBottom, rTop, h, slices, color) {
     return { vertices, faces };
 }
 
+// KUBUS
 function generateBox(w, h, d, color, center, ex, ey, ez) {
     center = center || [0, 0, 0];
     ex = ex || [1, 0, 0];
@@ -222,8 +222,7 @@ function cross3(a, b) {
     ];
 }
 
-// RANTAI KUBUS menempel di permukaan depan ellipsoid
-// dipakai untuk sabuk silang di dada
+// RANTAI KUBUS
 function ellipsoidFrontPoint(a, b, c, k, x, y) {
     var A = a * k, B = b * k, C = c * k;
     var q = 1 - (x / A) * (x / A) - (y / B) * (y / B);
@@ -245,7 +244,7 @@ function generateStrapBoxes(a, b, c, k, x0, y0, x1, y1, width, thickness, segs, 
 
         var ex = normalize3(dir);
         var eyRaw = normalize3([-ex[1], ex[0], 0]);
-        var ez = normalize3(cross3(ex, eyRaw));   // mengarah keluar (+Z)
+        var ez = normalize3(cross3(ex, eyRaw)); 
         var ey = cross3(ez, ex);
 
         var center = [
@@ -259,11 +258,32 @@ function generateStrapBoxes(a, b, c, k, x0, y0, x1, y1, width, thickness, segs, 
     return mergeGeometry(list);
 }
 
-// CINCIN KUBUS mengelilingi badan 
-function generateBoxRing(a, c, y, n, w, h, d, color) {
+// KANCING KECIL 
+function generateStrapMark(a, b, c, k, x0, y0, x1, y1, t, length, width, thickness, color) {
+    var e = 0.01;
+    var pA = ellipsoidFrontPoint(a, b, c, k, x0 + (x1 - x0) * (t - e), y0 + (y1 - y0) * (t - e));
+    var pB = ellipsoidFrontPoint(a, b, c, k, x0 + (x1 - x0) * (t + e), y0 + (y1 - y0) * (t + e));
+    var p = ellipsoidFrontPoint(a, b, c, k, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
+
+    var ex = normalize3([pB[0] - pA[0], pB[1] - pA[1], pB[2] - pA[2]]);
+    var eyRaw = normalize3([-ex[1], ex[0], 0]);
+    var ez = normalize3(cross3(ex, eyRaw));
+    var ey = cross3(ez, ex);
+
+    var lift = 0.03 + thickness / 2;   // di atas permukaan sabuk
+    var center = [p[0] + ez[0] * lift, p[1] + ez[1] * lift, p[2] + ez[2] * lift];
+
+    return generateBox(length, width, thickness, color, center, ex, ey, ez);
+}
+
+// CINCIN KUBUS
+function generateBoxRing(a, c, y, n, w, h, d, color, psiStart, psiEnd) {
     var list = [];
+    var partial = (psiStart !== undefined && psiEnd !== undefined);
     for (var i = 0; i < n; i++) {
-        var psi = 2 * Math.PI * i / n;
+        var psi = partial
+            ? psiStart + (psiEnd - psiStart) * i / (n - 1)
+            : 2 * Math.PI * i / n;
         var ex = normalize3([-a * Math.sin(psi), 0, c * Math.cos(psi)]);
         var ey = [0, 1, 0];
         var ez = [ex[2], 0, -ex[0]];             // mengarah keluar
@@ -274,6 +294,7 @@ function generateBoxRing(a, c, y, n, w, h, d, color) {
     return mergeGeometry(list);
 }
 
+// ELLIPTIC PARABOLOID
 function generateEllipticParaboloid(a, c, h, stacks, slices, color) {
     var vertices = [];
     var faces = [];
@@ -285,7 +306,7 @@ function generateEllipticParaboloid(a, c, h, stacks, slices, color) {
             var t = j / slices * 2 * Math.PI;
             var x = a * r * Math.cos(t);
             var z = c * r * Math.sin(t);
-            var y = h * (1 - r * r) - h;    
+            var y = h * (1 - r * r) - h;     
 
             pushVertex(
                 vertices, x, y + h / 2, z,
@@ -305,7 +326,6 @@ function generateEllipticParaboloid(a, c, h, stacks, slices, color) {
         }
     }
 
-    // alas datar
     var center = vertices.length / 8;
     pushVertex(vertices, 0, -h / 2, 0, 0, -1, 0, color);
     var start = vertices.length / 8;
@@ -320,6 +340,7 @@ function generateEllipticParaboloid(a, c, h, stacks, slices, color) {
     return { vertices, faces };
 }
 
+// HYPERBOLOID 2 SHEET
 function generateHyperboloid2(a, b, c, uMin, uMax, stacks, slices, color) {
     var vertices = [];
     var faces = [];
@@ -336,7 +357,6 @@ function generateHyperboloid2(a, b, c, uMin, uMax, stacks, slices, color) {
             var z = b * Math.sinh(u) * Math.sin(t);
             var y = c * Math.cosh(u);
 
-            // normal menghadap keluar-bawah
             pushVertex(
                 vertices, x, y - yMid, z,
                 x / (a * a), -y / (c * c), z / (b * b),
@@ -358,6 +378,7 @@ function generateHyperboloid2(a, b, c, uMin, uMax, stacks, slices, color) {
     return { vertices, faces };
 }
 
+// BEZIER CURVE 
 function bezierPoint(p0, p1, p2, p3, t) {
     var u = 1 - t;
     var w0 = u * u * u, w1 = 3 * u * u * t, w2 = 3 * u * t * t, w3 = t * t * t;
@@ -412,7 +433,6 @@ function generateBezierTube(p0, p1, p2, p3, r0, r1, segs, slices, color) {
         }
     }
 
-    // tutup kedua ujung
     [[0, -1, r0], [1, 1, r1]].forEach(function (end) {
         var t = end[0], sign = end[1], r = end[2];
         var P = bezierPoint(p0, p1, p2, p3, t);
@@ -492,56 +512,43 @@ function drawFaceCanvas() {
     ctx.fillRect(0, 0, W, H);
 
     // pipi merah
-    [-27, 27].forEach(function (lon) {
-        var g = ctx.createRadialGradient(px(lon), py(-13), 2, px(lon), py(-13), 40);
-        g.addColorStop(0, "rgba(215, 35, 35, 1)");
-        g.addColorStop(0.7, "rgba(215, 35, 35, 0.95)");
-        g.addColorStop(1, "rgba(215, 35, 35, 0)");
+    [-34, 34].forEach(function (lon) {
+        var g = ctx.createRadialGradient(px(lon), py(-14), 2, px(lon), py(-14), 38);
+        g.addColorStop(0, "rgba(218, 52, 52, 1)");
+        g.addColorStop(0.85, "rgba(218, 52, 52, 1)");
+        g.addColorStop(1, "rgba(218, 52, 52, 0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(px(lon), py(-13), 40, 0, 2 * Math.PI);
-        ctx.fill();
-    });
-
-    // bayangan gelap di sekitar mata
-    [-19, 19].forEach(function (lon) {
-        var g = ctx.createRadialGradient(px(lon), py(10), 4, px(lon), py(10), 52);
-        g.addColorStop(0, "rgba(40, 25, 20, 0.55)");
-        g.addColorStop(1, "rgba(40, 25, 20, 0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(px(lon), py(10), 52, 0, 2 * Math.PI);
+        ctx.arc(px(lon), py(-14), 38, 0, 2 * Math.PI);
         ctx.fill();
     });
 
     // mata
-    ctx.fillStyle = "#1c1210";
-    [-19, 19].forEach(function (lon) {
+    [-29, 29].forEach(function (lon) {
         ctx.beginPath();
-        ctx.ellipse(px(lon), py(10), 18, 28, 0, 0, 2 * Math.PI);
+        ctx.ellipse(px(lon), py(7), 20, 26, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = "#f8f4ec";
         ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#1c1210";
+        ctx.stroke();
     });
 
-    // hidung
-    ctx.beginPath();
-    ctx.ellipse(px(0), py(-4), 6, 9, 0, 0, 2 * Math.PI);
-    ctx.fill();
+    ctx.fillStyle = "#120a0a";
+    ctx.fillRect(px(-20), py(-41), px(20) - px(-20), py(-62) - py(-41));
 
-    // mulut dengan gigi
-    var mx = px(-14);
-    var mw = px(14) - px(-14);
-    var my = py(-22);
-    var mh = py(-31) - py(-22);
-
-    ctx.fillStyle = "#1c1210";
-    ctx.fillRect(mx, my, mw, mh);
+    // gigi rahang atas
+    var tx = px(-17);
+    var tw = px(17) - px(-17);
+    var ty = py(-35);
+    var th = py(-41) - py(-35);
 
     ctx.fillStyle = "#f4eee0";
-    ctx.fillRect(mx + 4, my + 4, mw - 8, mh * 0.55);
+    ctx.fillRect(tx, ty, tw, th);
 
-    ctx.fillStyle = "#1c1210";
-    for (var i = 1; i < 7; i++) {
-        ctx.fillRect(mx + 4 + (mw - 8) * i / 7 - 1.5, my + 4, 3, mh * 0.55);
+    ctx.fillStyle = "#3a2a2a";
+    for (var i = 1; i < 5; i++) {
+        ctx.fillRect(tx + tw * i / 5 - 1.5, ty, 3, th);
     }
 
     return canvas;
@@ -565,7 +572,49 @@ function createFaceTexture(GL) {
     return tex;
 }
 
-// MEMBUAT MESH DAN BUFFER WEBGL
+// TEXTURE BADAN
+function drawBodyCanvas() {
+    var W = 1024, H = 512;
+    var canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext("2d");
+
+    // lon
+    function px(lon) { return W * 0.75 + lon / 360 * W; }
+    function py(lat) { return H / 2 - lat / 180 * H; }
+
+    ctx.fillStyle = "#8c1412";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = "#120a0a";
+    ctx.fillRect(px(-20), py(52), px(20) - px(-20), py(41.5) - py(52));
+
+    // gigi rahang bawah
+    var tx = px(-20);
+    var tw = px(20) - px(-20);
+    var ty = py(41.5);
+    var th = py(36) - py(41.5);
+
+    ctx.fillStyle = "#f4eee0";
+    ctx.fillRect(tx, ty, tw, th);
+
+    ctx.fillStyle = "#3a2a2a";
+    for (var i = 1; i < 5; i++) {
+        ctx.fillRect(tx + tw * i / 5 - 1.5, ty, 3, th);
+    }
+
+    return canvas;
+}
+
+function createBodyTexture(GL) {
+    var tex = GL.createTexture();
+    var canvas = drawBodyCanvas();
+    uploadTexture(GL, tex, canvas, canvas.width, canvas.height);
+    return tex;
+}
+
+// mesh
 function createMesh(GL, geometry, texture) {
     var OBJECT_VERTEX = GL.createBuffer();
     GL.bindBuffer(GL.ARRAY_BUFFER, OBJECT_VERTEX);
@@ -693,52 +742,71 @@ function main() {
 
     var whiteTex = createWhiteTexture(GL);
     var faceTex = createFaceTexture(GL);
+    var bodyTex = createBodyTexture(GL);
 
     function mesh(geometry) {
         return createMesh(GL, geometry, whiteTex);
     }
 
-    // BADAN: ELLIPSOID + ELLIPSOID
+    // BADAN
     var BODY_A = 0.58, BODY_B = 0.92, BODY_C = 0.38;
 
-    var meshBody = mesh(generateEllipsoid(BODY_A, BODY_B, BODY_C, 36, 36, RED));
+    var meshBody = createMesh(
+        GL,
+        generateEllipsoid(BODY_A, BODY_B, BODY_C, 36, 36, WHITE),
+        bodyTex
+    );
     var meshSkirt = mesh(generateEllipsoid(0.60, 0.38, 0.40, 32, 32, RED));
 
-    // AKSESORI: KUBUS + ELLIPTIC PARABOLOID
+    // AKSESORI
+
     // sabuk silang di dada
+    var STRAP_A = [-0.42, 0.60, 0.12, -0.40];   // x0, y0, x1, y1
+    var STRAP_B = [0.42, 0.60, -0.12, -0.40];
+    var STRAP_W = 0.20;
+
     var meshStrapA = mesh(generateStrapBoxes(
-        BODY_A, BODY_B, BODY_C, 1.025, -0.40, 0.55, 0.32, -0.40, 0.11, 0.03, 14, CREAM
+        BODY_A, BODY_B, BODY_C, 1.025,
+        STRAP_A[0], STRAP_A[1], STRAP_A[2], STRAP_A[3], STRAP_W, 0.03, 16, CREAM
     ));
     var meshStrapB = mesh(generateStrapBoxes(
-        BODY_A, BODY_B, BODY_C, 1.045, 0.40, 0.55, -0.32, -0.40, 0.11, 0.03, 14, CREAM
+        BODY_A, BODY_B, BODY_C, 1.045,
+        STRAP_B[0], STRAP_B[1], STRAP_B[2], STRAP_B[3], STRAP_W, 0.03, 16, CREAM
     ));
 
-    // ikat pinggang, gesper dan pelat dada
-    var meshBelt = mesh(generateBoxRing(0.545, 0.37, -0.44, 24, 0.15, 0.10, 0.04, CREAM));
-    var meshBuckle = mesh(generateBox(0.16, 0.12, 0.05, GOLD));
+    // dua kancing emas kecil di sabuk
+    var meshStrapMarks = mesh(mergeGeometry([
+        generateStrapMark(BODY_A, BODY_B, BODY_C, 1.045,
+            STRAP_B[0], STRAP_B[1], STRAP_B[2], STRAP_B[3], 0.28, 0.09, 0.035, 0.015, GOLD),
+        generateStrapMark(BODY_A, BODY_B, BODY_C, 1.045,
+            STRAP_B[0], STRAP_B[1], STRAP_B[2], STRAP_B[3], 0.40, 0.09, 0.035, 0.015, GOLD),
+        generateStrapMark(BODY_A, BODY_B, BODY_C, 1.045,
+            STRAP_B[0], STRAP_B[1], STRAP_B[2], STRAP_B[3], 0.80, 0.09, 0.035, 0.015, GOLD),
+        generateStrapMark(BODY_A, BODY_B, BODY_C, 1.045,
+            STRAP_B[0], STRAP_B[1], STRAP_B[2], STRAP_B[3], 0.90, 0.09, 0.035, 0.015, GOLD)
+    ]));
 
-    var S45 = Math.SQRT1_2;
-    var meshChestPlate = mesh(generateBox(
-        0.12, 0.12, 0.04, GOLD,
-        [0, 0, 0], [S45, S45, 0], [-S45, S45, 0], [0, 0, 1]
+    // ikat pinggang putih dan deretan peluru
+    var meshBelt = mesh(generateBoxRing(0.545, 0.37, -0.44, 24, 0.15, 0.13, 0.04, CREAM));
+    var meshBullets = mesh(generateBoxRing(
+        0.585, 0.405, -0.44, 15, 0.065, 0.15, 0.05, BLACK,
+        Math.PI * 0.12, Math.PI * 0.88
     ));
 
-    // epaulette di bahu
     var meshEpaulette = mesh(generateEllipticParaboloid(0.34, 0.30, 0.16, 8, 28, GOLD));
 
-    // KEPALA: SPHERE + texture wajah
+    // KEPALA
     var meshHead = createMesh(
         GL,
         generateEllipsoid(0.58, 0.58, 0.58, 40, 40, WHITE),
         faceTex
     );
 
-    // TOPI: CYLINDER + CONE
+    // TOPI
     var HAT_R = 0.62;
     var meshHat = mesh(generateCylinder(HAT_R, 1.2, 40, BLACK));
     var meshHatTop = mesh(generateCone(HAT_R, 0.56, 0.12, 40, BLACK));
 
-    // 3 garis emas pendek di tengah depan topi
     var FRONT = Math.PI / 2;
     var SPAN = 0.50;
     var STRIPE_COUNT = 3;
@@ -751,9 +819,9 @@ function main() {
         STRIPE_R, STRIPE_T, 20, GOLD, FRONT - SPAN, FRONT + SPAN
     ));
 
-    // TANGAN: CYLINDER + ELLIPSOID
-    var L1 = 0.70;   // bahu = siku
-    var L2 = 0.82;   // siku = pusat tangan
+    // TANGAN
+    var L1 = 0.70;   // bahu -> siku
+    var L2 = 0.82;   // siku -> pusat tangan
 
     var meshShoulderBall = mesh(generateEllipsoid(0.19, 0.19, 0.19, 20, 20, RED));
     var meshUpperArm = mesh(generateCylinder(0.16, 0.70, 28, RED));
@@ -761,21 +829,29 @@ function main() {
     var meshForearm = mesh(generateEllipsoid(0.17, 0.39, 0.17, 28, 28, RED));
     var meshHand = mesh(generateEllipsoid(0.15, 0.17, 0.15, 24, 24, SKIN));
 
-    // SENJATA: CYLINDER + BEZIER CURVE + KUBUS
-    var meshGunReceiver = mesh(generateCylinder(0.06, 0.50, 20, METAL));
-    var meshGunGuard = mesh(generateCylinder(0.065, 0.45, 20, WOOD));
-    var meshGunBarrel = mesh(generateCylinder(0.035, 0.80, 16, METAL));
+    // SENJATA
+    // double barrel shotgun
+    var meshGunBreech = mesh(generateCylinder(0.12, 0.14, 24, GOLD));       // cincin kuningan di pangkal laras
+    var meshGunBarrel = mesh(generateCylinder(0.045, 0.95, 20, METAL));     // dipakai dua kali
+    var meshGunForend = mesh(generateCylinder(0.06, 0.50, 20, WOOD));       // pelindung kayu di bawah laras
 
-    // popor melengkung: tabung menyapu kurva Bezier kubik
+    // popor melengkung
     var meshGunStock = mesh(generateBezierTube(
-        [0.0, -0.25], [0.01, -0.50], [0.07, -0.75], [0.20, -1.00],
-        0.055, 0.10,
-        20, 16, WOOD
+        [0.0, 0.05], [0.02, -0.25], [0.08, -0.60], [0.24, -0.95],
+        0.065, 0.12,
+        24, 16, WOOD
     ));
 
-    // magasin dan pembidik depan 
-    var meshGunMag = mesh(generateBox(0.22, 0.10, 0.07, METAL));
-    var meshGunSight = mesh(generateBox(0.05, 0.04, 0.03, METAL));
+    // pelindung pelatuk
+    var meshGunTriggerGuard = mesh(generateBezierTube(
+        [0.07, -0.03], [0.24, -0.05], [0.24, -0.27], [0.07, -0.29],
+        0.014, 0.014,
+        16, 8, GOLD
+    ));
+
+    // dua hammer dan pembidik depan 
+    var meshGunHammer = mesh(generateBox(0.07, 0.06, 0.03, METAL));
+    var meshGunSight = mesh(generateBox(0.03, 0.04, 0.03, METAL));
 
     // KAKI
     var meshHip = mesh(generateEllipsoid(0.22, 0.22, 0.22, 20, 20, BLUE));
@@ -784,9 +860,9 @@ function main() {
     var meshShin = mesh(generateEllipsoid(0.19, 0.78, 0.18, 28, 28, BLUE));
 
     // SEPATU
-    var BOOT_A = 0.10; // skala asimptot hyperboloid
-    var BOOT_R0 = 0.20, BOOT_R1 = 0.24;7 // radius bawah & atas batang sepatu
-    var BOOT_H = 0.50; // tinggi batang sepatu
+    var BOOT_A = 0.10;                                  // skala asimptot hyperboloid
+    var BOOT_R0 = 0.20, BOOT_R1 = 0.24;                 // radius bawah dan atas batang sepatu
+    var BOOT_H = 0.50;                                  // tinggi batang sepatu
     var bootU0 = Math.asinh(BOOT_R0 / BOOT_A);
     var bootU1 = Math.asinh(BOOT_R1 / BOOT_A);
     var BOOT_C = BOOT_H / (Math.cosh(bootU1) - Math.cosh(bootU0));
@@ -815,13 +891,13 @@ function main() {
 
     var Body = make(meshBody);
 
-    // badan dan aksesori
+    // badan & aksesori
     attach(Body, meshSkirt, 0, -0.62, 0);
     attach(Body, meshBelt, 0, 0, 0);
-    attach(Body, meshBuckle, 0, -0.44, 0.40);
+    attach(Body, meshBullets, 0, 0, 0);
     attach(Body, meshStrapA, 0, 0, 0);
     attach(Body, meshStrapB, 0, 0, 0);
-    attach(Body, meshChestPlate, 0, 0.07, 0.415);
+    attach(Body, meshStrapMarks, 0, 0, 0);
 
     // epaulette
     var EpL = attach(Body, meshEpaulette, -0.60, 0.68, 0);
@@ -830,19 +906,22 @@ function main() {
     LIBS.rotateZ(EpR.POSITION_MATRIX, -0.32);
 
     // senapan
-    var GUN_ANGLE = -1.19;
-    var GUN_DIR = [-Math.sin(GUN_ANGLE), Math.cos(GUN_ANGLE)];   
+    var GUN_ANGLE = -1.19;                       // rotasi Z 
+    var GUN_DIR = [-Math.sin(GUN_ANGLE), Math.cos(GUN_ANGLE)];   // arah panjang senapan di bidang XY
     var GUN_POS = [0, -0.33, 0.62];
-    var GUN_HALF = 0.60;  
+    var GUN_HALF = 0.60;                         // jarak dari tengah ke masing-masing tangan
 
-    var Gun = attach(Body, meshGunReceiver, GUN_POS[0], GUN_POS[1], GUN_POS[2]);
+    var Gun = attach(Body, meshGunBreech, GUN_POS[0], GUN_POS[1], GUN_POS[2]);
     LIBS.rotateZ(Gun.POSITION_MATRIX, GUN_ANGLE);
 
-    attach(Gun, meshGunGuard, 0, 0.45, 0);
-    attach(Gun, meshGunBarrel, 0, 0.70, 0);
+    attach(Gun, meshGunBarrel, 0, 0.55, -0.05);
+    attach(Gun, meshGunBarrel, 0, 0.55, 0.05);
+    attach(Gun, meshGunForend, 0.09, 0.45, 0);
     attach(Gun, meshGunStock, 0, 0, 0);         
-    attach(Gun, meshGunMag, 0.17, -0.05, 0);
-    attach(Gun, meshGunSight, -0.05, 1.0, 0);
+    attach(Gun, meshGunTriggerGuard, 0, 0, 0);
+    attach(Gun, meshGunHammer, -0.13, 0.0, -0.05);
+    attach(Gun, meshGunHammer, -0.13, 0.0, 0.05);
+    attach(Gun, meshGunSight, -0.06, 1.0, 0);
 
     function buildArm(side, target) {
         var sx = side * 0.68, sy = 0.5, sz = 0;
@@ -859,7 +938,7 @@ function main() {
         var dy = target[1] - sy;
         var dz = target[2] - sz;
 
-        var delta = Math.atan2(dx, -dy);
+        var delta = Math.atan2(dx, -dy);   
         var dyEff = -Math.hypot(dx, dy);
         var d = Math.hypot(dyEff, dz);
 
@@ -889,7 +968,7 @@ function main() {
     buildArm(-1, handLeft);
     buildArm(1, handRight);
 
-    // kaki
+    // kaki: sendi pinggul -> lutut -> sepatu
     function buildLeg(side, hipX, hipSwing, hipSide, kneeBend) {
         var Hip = attach(Body, meshHip, hipX, -0.85, 0);
         attach(Hip, meshThigh, 0, -0.70, 0);
@@ -904,11 +983,10 @@ function main() {
         LIBS.rotateX(Knee.POSITION_MATRIX, kneeBend);
     }
 
-    // kedua kaki berdiri lurus, telapak menapak, sedikit terbuka ke samping
     buildLeg(-1, -0.26, 0.0, -0.03, 0.0);
     buildLeg(1, 0.26, 0.0, 0.03, 0.0);
 
-    // kepala & topi
+    // kepala dan topi 
     var Head = attach(Body, meshHead, 0, 1.20, 0);
 
     var Hat = attach(Head, meshHat, 0, 0.88, 0);
@@ -928,7 +1006,7 @@ function main() {
     LIBS.translateY(VIEWMATRIX, 0.6);
     LIBS.translateZ(VIEWMATRIX, -12.5);
 
-    // INTERAKSI: drag mouse untuk memutar
+    // INTERAKSI
     var rotY = 0;
     var dragging = false;
     var lastX = 0;
