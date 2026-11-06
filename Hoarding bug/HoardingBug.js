@@ -1,3 +1,7 @@
+// HoardingBug.js -- memakai MyObject.js (versi texture) tanpa mengubah MyObject.js
+// Format vertex: x y z | r g b | u v  (8 float = 32 byte, sesuai MyObject.js)
+import { MyObject } from "./MyObject.js";
+
 // Pencahayaan sederhana (arah cahaya tetap), dipakai untuk memberi warna per vertex
 function lightShade(nx, ny, nz, twoSided) {
     var l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
@@ -6,7 +10,7 @@ function lightShade(nx, ny, nz, twoSided) {
     return 0.45 + 0.55 * Math.max(d, 0);
 }
 
-// Ellipsoid (sama seperti generateSphere di mainInstance.js)
+// Ellipsoid
 // cut = { cx, cy, R } -> bagian permukaan depan (z > 0) yang berada di dalam
 //       cylinder sumbu-Z berjari-jari R di titik (cx, cy) dibuang (dilubangi)
 function generateSphere(a, b, c, stack, step, color, cut) {
@@ -30,6 +34,9 @@ function generateSphere(a, b, c, stack, step, color, cut) {
             // Push color data
             var shade = lightShade(x / (a * a), y / (b * b), z / (c * c), false);
             vertices.push(color[0] * shade, color[1] * shade, color[2] * shade);
+
+            // Push texture coordinate (u, v)
+            vertices.push(j / step, i / stack);
 
             // Apakah titik ini berada di dalam cylinder pemotong?
             var flag = false;
@@ -79,6 +86,7 @@ function generateEllipticParaboloid(a, b, h, stack, step, color, closed) {
 
             var shade = lightShade(-2 * h * uu * Math.cos(v) / a, 1, -2 * h * uu * Math.sin(v) / b, true);
             vertices.push(color[0] * shade, color[1] * shade, color[2] * shade);
+            vertices.push(j / step, uu);
         }
     }
 
@@ -95,9 +103,9 @@ function generateEllipticParaboloid(a, b, h, stack, step, color, closed) {
     }
 
     if (closed) {
-        var center = vertices.length / 6;
+        var center = vertices.length / 8;
         var shade = lightShade(0, h > 0 ? 1 : -1, 0, true);
-        vertices.push(0, h, 0, color[0] * shade, color[1] * shade, color[2] * shade);
+        vertices.push(0, h, 0, color[0] * shade, color[1] * shade, color[2] * shade, 0.5, 1);
         for (var j = 0; j < step; j++) {
             faces.push(center, stack * (step + 1) + j, stack * (step + 1) + j + 1);
         }
@@ -112,19 +120,19 @@ function generateCone(r, h, seg, color) {
 
     // vertex 0 = puncak
     var s0 = lightShade(0, 1, 0, false);
-    vertices.push(0, h, 0, color[0] * s0, color[1] * s0, color[2] * s0);
+    vertices.push(0, h, 0, color[0] * s0, color[1] * s0, color[2] * s0, 0.5, 1);
 
     // cincin alas
     for (var j = 0; j <= seg; j++) {
         var v = j / seg * 2 * Math.PI;
         var shade = lightShade(Math.cos(v) * h, r, Math.sin(v) * h, false);
-        vertices.push(r * Math.cos(v), 0, r * Math.sin(v), color[0] * shade, color[1] * shade, color[2] * shade);
+        vertices.push(r * Math.cos(v), 0, r * Math.sin(v), color[0] * shade, color[1] * shade, color[2] * shade, j / seg, 0);
     }
 
     // pusat alas
-    var center = vertices.length / 6;
+    var center = vertices.length / 8;
     var sb = lightShade(0, -1, 0, false);
-    vertices.push(0, 0, 0, color[0] * sb, color[1] * sb, color[2] * sb);
+    vertices.push(0, 0, 0, color[0] * sb, color[1] * sb, color[2] * sb, 0.5, 0);
 
     for (var j = 0; j < seg; j++) {
         faces.push(0, 1 + j, 2 + j);          // selimut
@@ -190,6 +198,7 @@ function generateCurve(P, r0, r1, N, seg, color) {
             vertices.push(C[0] + r * n[0], C[1] + r * n[1], C[2] + r * n[2]);
             var shade = lightShade(n[0], n[1], n[2], false);
             vertices.push(color[0] * shade, color[1] * shade, color[2] * shade);
+            vertices.push(j / seg, i / N);
         }
     }
 
@@ -207,7 +216,7 @@ function generateCurve(P, r0, r1, N, seg, color) {
     return { vertices, faces };
 }
 
-// Dinding dalam lubang mulut: cylinder sumbu-Z yang ujung depannya mengikuti
+// Dinding dalem lubang mulut: cylinder sumbu-Z yang ujung depannya ngikut
 // permukaan ellipsoid kepala (hasil pemotongan), ujung belakangnya ditutup (gelap)
 function generateMouth(a, b, c, cx, cy, R, zBack, seg) {
     var vertices = [];
@@ -219,8 +228,8 @@ function generateMouth(a, b, c, cx, cy, R, zBack, seg) {
         var y = cy + R * Math.sin(v);
         var zFront = c * Math.sqrt(Math.max(1 - (x * x) / (a * a) - (y * y) / (b * b), 0));
 
-        vertices.push(x, y, zFront, 0.30, 0.10, 0.04);   // di permukaan kepala
-        vertices.push(x, y, zBack, 0.03, 0.01, 0.01);    // di dalam kepala (gelap)
+        vertices.push(x, y, zFront, 0.30, 0.10, 0.04, j / seg, 0);   // di permukaan kepala
+        vertices.push(x, y, zBack, 0.03, 0.01, 0.01, j / seg, 1);    // di dalam kepala (gelap)
     }
 
     for (var j = 0; j < seg; j++) {
@@ -230,8 +239,8 @@ function generateMouth(a, b, c, cx, cy, R, zBack, seg) {
     }
 
     // tutup belakang
-    var center = vertices.length / 6;
-    vertices.push(cx, cy, zBack, 0.02, 0.0, 0.0);
+    var center = vertices.length / 8;
+    vertices.push(cx, cy, zBack, 0.02, 0.0, 0.0, 0.5, 1);
     for (var j = 0; j < seg; j++) {
         faces.push(center, 2 * j + 1, 2 * j + 3);
     }
@@ -244,51 +253,6 @@ function generateMouth(a, b, c, cx, cy, R, zBack, seg) {
 
 // ===========================================================================================================================================
 
-
-// Hierarchical Object mesh = null -> mirip kayak sendi 
-class MyObject {
-    GL = null;
-    SHADER_PROGRAM = null;
-
-    _position = null;
-    _color = null;
-    _MMatrix = null;
-
-    mesh = null;
-
-    POSITION_MATRIX = LIBS.get_I4(); // Mpos
-    MOVE_MATRIX     = LIBS.get_I4(); // Mmove
-
-    childs = [];
-
-    constructor(GL, SHADER_PROGRAM, _position, _color, _Mmatrix, mesh) {
-        this.GL = GL;
-        this.SHADER_PROGRAM = SHADER_PROGRAM;
-        this._position = _position;
-        this._color = _color;
-        this._MMatrix = _Mmatrix;
-        this.mesh = mesh;
-    }
-
-    render(PARENT_MATRIX) {
-        this.MODEL_MATRIX = LIBS.multiply(this.MOVE_MATRIX, this.POSITION_MATRIX);
-        this.MODEL_MATRIX = LIBS.multiply(this.MODEL_MATRIX, PARENT_MATRIX);
-
-        if (this.mesh) {
-            this.GL.useProgram(this.SHADER_PROGRAM);
-            this.GL.uniformMatrix4fv(this._MMatrix, false, this.MODEL_MATRIX);
-
-            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.mesh.OBJECT_VERTEX);
-            this.GL.vertexAttribPointer(this._position, 3, this.GL.FLOAT, false, 24, 0);
-            this.GL.vertexAttribPointer(this._color, 3, this.GL.FLOAT, false, 24, 12);
-
-            this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.mesh.OBJECT_FACES);
-            this.GL.drawElements(this.GL.TRIANGLES, this.mesh.count, this.GL.UNSIGNED_SHORT, 0);
-        }
-
-        this.childs.forEach(child => child.render(this.MODEL_MATRIX));
-    }
-}
 
 
 function main() {
@@ -314,20 +278,25 @@ function main() {
         attribute vec3 position;
         uniform mat4 Pmatrix, Vmatrix, Mmatrix;
         attribute vec3 color;
+        attribute vec2 uv;
         varying vec3 vColor;
+        varying vec2 vUV;
 
         void main(void) {
             gl_Position = Pmatrix * Vmatrix * Mmatrix * vec4(position, 1.);
             vColor = color;
+            vUV = uv;
         }`;
 
 
     var shader_fragment_source = `
         precision mediump float;
+        uniform sampler2D sampler;
         varying vec3 vColor;
+        varying vec2 vUV;
 
         void main(void) {
-            gl_FragColor = vec4(vColor, 1.);
+            gl_FragColor = vec4(vColor, 1.) * texture2D(sampler, vUV);
         }`;
 
 
@@ -360,26 +329,73 @@ function main() {
     var _color = GL.getAttribLocation(SHADER_PROGRAM, "color");
     GL.enableVertexAttribArray(_color);
 
+    var _uv = GL.getAttribLocation(SHADER_PROGRAM, "uv");
+    GL.enableVertexAttribArray(_uv);
+
     var _Pmatrix = GL.getUniformLocation(SHADER_PROGRAM, "Pmatrix");
     var _Vmatrix = GL.getUniformLocation(SHADER_PROGRAM, "Vmatrix");
     var _Mmatrix = GL.getUniformLocation(SHADER_PROGRAM, "Mmatrix");
+    var _sampler = GL.getUniformLocation(SHADER_PROGRAM, "sampler");
 
     GL.useProgram(SHADER_PROGRAM);
 
 
-    /*======================== WARNA & UKURAN ======================== */
+    /*======================== WARNA ======================== */
     var C_BODY  = [0.34, 0.29, 0.23];
     var C_HEAD  = [0.39, 0.33, 0.27];
     var C_EYE   = [0.55, 0.19, 0.17];
+    var C_TOOTH = [0.68, 0.63, 0.54];
+    var C_LIMB  = [0.30, 0.25, 0.20];
+    var C_PAW   = [0.26, 0.21, 0.17];
+    var C_WING  = [0.24, 0.20, 0.16];
+    var C_ANT   = [0.10, 0.08, 0.06];
+
+
+
+    var B_UARM  = 1.00;
+    var B_FARM  = 1.70;
+    var B_THIGH = 0.75;
+    var B_SHIN  = 0.90;
 
     // kepala (ellipsoid) & lubang mulut (cylinder pemotong)
     var HEAD  = { a: 1.10, b: 0.95, c: 1.00 };
     var MOUTH = { cx: 0, cy: -0.30, R: 0.34, wall: 0.44 }; // wall = R + sedikit (lebih besar dari lubang)
 
 
+    /*======================== TEXTURE ======================== */
+    // Texture putih 1x1: dipakai mesh yang tidak punya gambar (warna vertex tidak berubah)
+    var makeWhiteTexture = function () {
+        var texture = GL.createTexture();
+        GL.bindTexture(GL.TEXTURE_2D, texture);
+        GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, 1, 1, 0, GL.RGBA, GL.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+        return texture;
+    };
+    var WHITE_TEXTURE = makeWhiteTexture();
+
+    // Texture dari gambar (opsional): putih dulu, diganti gambar setelah selesai dimuat
+    var loadTexture = function (src) {
+        var texture = makeWhiteTexture();
+        var image = new Image();
+        image.onload = function () {
+            GL.bindTexture(GL.TEXTURE_2D, texture);
+            GL.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
+            GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, image);
+            GL.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, false);
+            renderScene();
+        };
+        image.src = src;
+        return texture;
+    };
+
+
     /*======================== MESH (VBO & EBO) ======================== */
-    // Tiap bentuk dibuat SEKALI, lalu dipakai berulang (kiri/kanan, gigi, dll)
-    var createMesh = function (geo) {
+    // createMesh(geo)            -> mesh tanpa gambar (texture putih)
+    // createMesh(geo, "ini.png") -> mesh dengan texture gambar
+    var createMesh = function (geo, imageSrc) {
         var OBJECT_VERTEX = GL.createBuffer();
         GL.bindBuffer(GL.ARRAY_BUFFER, OBJECT_VERTEX);
         GL.bufferData(GL.ARRAY_BUFFER, new Float32Array(geo.vertices), GL.STATIC_DRAW);
@@ -388,42 +404,98 @@ function main() {
         GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, OBJECT_FACES);
         GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(geo.faces), GL.STATIC_DRAW);
 
-        return { OBJECT_VERTEX: OBJECT_VERTEX, OBJECT_FACES: OBJECT_FACES, count: geo.faces.length };
+        return {
+            OBJECT_VERTEX: OBJECT_VERTEX,
+            OBJECT_FACES: OBJECT_FACES,
+            count: geo.faces.length,
+            texture: imageSrc ? loadTexture(imageSrc) : WHITE_TEXTURE
+        };
     };
 
-    var meshBody   = createMesh(generateSphere(1.50, 1.60, 1.30, 40, 40, C_BODY));
+    var meshBody   = createMesh(generateSphere(1.0, 1.60, 1.0, 40, 40, C_BODY));
     var meshHead   = createMesh(generateSphere(HEAD.a, HEAD.b, HEAD.c, 72, 72, C_HEAD,
                                                { cx: MOUTH.cx, cy: MOUTH.cy, R: MOUTH.R }));   // membuat lubang mulut di kepala
     var meshMouth  = createMesh(generateMouth(HEAD.a, HEAD.b, HEAD.c, MOUTH.cx, MOUTH.cy, MOUTH.wall, 0.1, 40));
 
     var meshEye    = createMesh(generateSphere(0.22, 0.22, 0.22, 24, 24, C_EYE));
 
+    var meshToothA = createMesh(generateCone(0.08, 0.5, 17, C_TOOTH));
+    var meshToothB = createMesh(generateCone(0.08, 0.5, 17, C_TOOTH));
+
+    var meshUArm   = createMesh(generateSphere(0.1, B_UARM, 0.19, 24, 24, C_LIMB));
+    var meshFArm   = createMesh(generateEllipticParaboloid(0.14, 0.14, B_FARM, 20, 24, C_LIMB, false));
+
+    var meshThigh  = createMesh(generateSphere(0.32, B_THIGH, 0.32, 24, 24, C_LIMB));
+    var meshShin   = createMesh(generateSphere(0.28, B_SHIN, 0.28, 24, 24, C_LIMB));
+    var meshFoot   = createMesh(generateEllipticParaboloid(0.40, 0.60, -0.28, 16, 24, C_PAW, true));
+
+    var meshWing   = createMesh(generateEllipticParaboloid(0.55, 1.20, 0.40, 16, 32, C_WING, false));
+
     // antena = kurva Bezier (4 titik kontrol); s = -1 kiri, +1 kanan
+    var headAntenna = function (s) {
+        return createMesh(generateCurve([
+            [0, 0, 0], [s * 0.25, 0.60, 0.35], [s * 0.75, 1.10, 0.35], [s * 1.00, 1.55, 0.80]
+        ], 0.07, 0.025, 24, 10, C_ANT));
+    };
+    var backAntenna = function (s) {
+        return createMesh(generateCurve([
+            [0, 0, 0], [s * 0.20, 0.50, -0.30], [s * 0.40, 0.90, -0.90], [s * 0.60, 1.00, -1.60]
+        ], 0.06, 0.02, 24, 10, C_ANT));
+    };
+    var meshHAntL = headAntenna(-1), meshHAntR = headAntenna(1);
+    var meshBAntL = backAntenna(-1), meshBAntR = backAntenna(1);
+
+
+
+    // MyObject.js selalu menggambar mesh-nya, jadi sendi (joint) diberi mesh kosong
+    // (1 segitiga degenerate = tidak terlihat)
+    var meshEmpty  = createMesh({ vertices: [0, 0, 0, 0, 0, 0, 0, 0], faces: [0, 0, 0] });
 
 
     /*======================== HIERARKI OBJEK ======================== */
     var newObj = function (mesh) {
-        return new MyObject(GL, SHADER_PROGRAM, _position, _color, _Mmatrix, mesh);
+        // newObj(null) tetap bisa dipakai untuk sendi -> otomatis memakai meshEmpty
+        return new MyObject(GL, SHADER_PROGRAM, _position, _color, _Mmatrix, mesh || meshEmpty, _uv, _sampler);
     };
     var place = function (obj, x, y, z) {
         LIBS.set_position(obj.POSITION_MATRIX, x, y, z);
     };
 
-    var Root = newObj(null);                 // sendi induk (diputar dengan mouse)
+    var Root = newObj(null);                
     var Body = newObj(meshBody);
     Root.childs.push(Body);
 
-    // ---- Kepala + mulut + gigi + mata + antena ----
     var Head = newObj(meshHead);
     place(Head, 0, 1.55, 0.70);
     Body.childs.push(Head);
 
     var Mouth = newObj(meshMouth);
     Head.childs.push(Mouth);
-
-    // gigi (Cone): di tepi lubang, menghadap ke tengah mulut dan sedikit ke depan
-    // arah d diputar dengan rotasi X lalu Z agar sumbu Y cone searah d
     
+
+    var TEETH = 2;
+    for (var k = 0; k < TEETH; k++) {
+        var th = 3 * Math.PI / 2 + (k === 0 ? -0.40 : 0.40);
+        var tx = MOUTH.cx + MOUTH.wall * Math.cos(th);
+        var ty = MOUTH.cy + MOUTH.wall * Math.sin(th);
+        var tz = HEAD.c * Math.sqrt(Math.max(1 - tx * tx / (HEAD.a * HEAD.a) - ty * ty / (HEAD.b * HEAD.b), 0)) ;
+
+        var d = normalize3([-0.7 * Math.cos(th), -0.7 * Math.sin(th), 0.7]);
+        var gam = Math.asin(d[2]);
+        var phi = Math.atan2(-d[0], d[1]);
+
+        var Tooth = newObj(k % 2 == 0 ? meshToothA : meshToothB);
+        var temp = LIBS.get_I4();
+        LIBS.rotateX(temp, gam);
+        Tooth.POSITION_MATRIX = LIBS.multiply(Tooth.POSITION_MATRIX, temp);
+        temp = LIBS.get_I4();
+        LIBS.rotateZ(temp, phi);
+        Tooth.POSITION_MATRIX = LIBS.multiply(Tooth.POSITION_MATRIX, temp);
+        temp = LIBS.get_I4();
+        LIBS.set_position(temp, tx, ty, tz);
+        Tooth.POSITION_MATRIX = LIBS.multiply(Tooth.POSITION_MATRIX, temp);
+        Head.childs.push(Tooth);
+    }
 
     // mata (Sphere) + pantulan cahaya kecil
     var makeEye = function (side) {
@@ -434,7 +506,41 @@ function main() {
     makeEye(-1);
     makeEye(1);
 
-   
+    var HAntL = newObj(meshHAntL), HAntR = newObj(meshHAntR);
+    place(HAntL, -0.40, 0.84, 0.10);
+    place(HAntR, 0.40, 0.84, 0.10);
+    Head.childs.push(HAntL);
+    Head.childs.push(HAntR);
+
+    var BAntL = newObj(meshBAntL), BAntR = newObj(meshBAntR);
+    place(BAntL, -0.50, 1.05, -0.85);
+    place(BAntR, 0.50, 1.05, -0.85);
+    Body.childs.push(BAntL);
+    Body.childs.push(BAntR);
+
+    var makeArm = function (side) {
+        var Shoulder = newObj(null);
+        LIBS.rotateZ(Shoulder.POSITION_MATRIX, -side * -0.35);
+        LIBS.rotateX(Shoulder.POSITION_MATRIX, -0.1);
+        place(Shoulder, side * 0.88, -0.25, 0.45);
+        Head.childs.push(Shoulder);
+
+        var UArm = newObj(meshUArm);
+        LIBS.translateY(UArm.POSITION_MATRIX, -B_UARM);
+        Shoulder.childs.push(UArm);
+
+        var Elbow = newObj(null);
+        LIBS.translateY(Elbow.POSITION_MATRIX, -2 * B_UARM);
+        LIBS.rotateZ(Elbow.POSITION_MATRIX, side * 2);
+        LIBS.rotateY(Elbow.POSITION_MATRIX, side * 5);
+        Shoulder.childs.push(Elbow);
+
+        var FArm = newObj(meshFArm);
+        LIBS.translateY(FArm.POSITION_MATRIX, -B_FARM);
+        Elbow.childs.push(FArm);
+    };
+    makeArm(-1);
+    makeArm(1);
 
     /*======================== MOUSE CAMERA & CONTROL ======================== */
     var PROJMATRIX = LIBS.get_projection(40, CANVAS.width / CANVAS.height, 1, 100);
