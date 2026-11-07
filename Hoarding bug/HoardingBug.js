@@ -346,20 +346,18 @@ function main() {
     var C_EYE   = [0.55, 0.19, 0.17];
     var C_TOOTH = [0.68, 0.63, 0.54];
     var C_LIMB  = [0.30, 0.25, 0.20];
-    var C_PAW   = [0.26, 0.21, 0.17];
-    var C_WING  = [0.24, 0.20, 0.16];
+    var C_WING  = [0.40, 0.70, 0.90];
     var C_ANT   = [0.10, 0.08, 0.06];
 
 
 
     var B_UARM  = 1.00;
     var B_FARM  = 1.70;
-    var B_THIGH = 0.75;
-    var B_SHIN  = 0.90;
+    var B_THIGH = 1;
 
     // kepala (ellipsoid) & lubang mulut (cylinder pemotong)
     var HEAD  = { a: 1.10, b: 0.95, c: 1.00 };
-    var MOUTH = { cx: 0, cy: -0.30, R: 0.34, wall: 0.44 }; // wall = R + sedikit (lebih besar dari lubang)
+    var MOUTH = { cx: 0, cy: -0.30, R: 0.17, wall: 0.22 }; // wall = R + sedikit (lebih besar dari lubang)
 
 
     /*======================== TEXTURE ======================== */
@@ -413,23 +411,23 @@ function main() {
     };
 
     var meshBody   = createMesh(generateSphere(1.0, 1.60, 1.0, 40, 40, C_BODY));
-    var meshHead   = createMesh(generateSphere(HEAD.a, HEAD.b, HEAD.c, 72, 72, C_HEAD,
+    var meshHead   = createMesh(generateSphere(HEAD.a, HEAD.b, HEAD.c, 160, 160, C_HEAD,
                                                { cx: MOUTH.cx, cy: MOUTH.cy, R: MOUTH.R }));   // membuat lubang mulut di kepala
     var meshMouth  = createMesh(generateMouth(HEAD.a, HEAD.b, HEAD.c, MOUTH.cx, MOUTH.cy, MOUTH.wall, 0.1, 40));
 
-    var meshEye    = createMesh(generateSphere(0.22, 0.22, 0.22, 24, 24, C_EYE));
+    var meshEye    = createMesh(generateSphere(0.35, 0.35, 0.35, 24, 24, C_EYE));
 
-    var meshToothA = createMesh(generateCone(0.08, 0.5, 17, C_TOOTH));
-    var meshToothB = createMesh(generateCone(0.08, 0.5, 17, C_TOOTH));
+    var meshToothA = createMesh(generateCone(0.05, 0.3, 17, C_TOOTH));
+    var meshToothB = createMesh(generateCone(0.05, 0.3, 17, C_TOOTH));
 
     var meshUArm   = createMesh(generateSphere(0.1, B_UARM, 0.19, 24, 24, C_LIMB));
     var meshFArm   = createMesh(generateEllipticParaboloid(0.14, 0.14, B_FARM, 20, 24, C_LIMB, false));
 
-    var meshThigh  = createMesh(generateSphere(0.32, B_THIGH, 0.32, 24, 24, C_LIMB));
-    var meshShin   = createMesh(generateSphere(0.28, B_SHIN, 0.28, 24, 24, C_LIMB));
-    var meshFoot   = createMesh(generateEllipticParaboloid(0.40, 0.60, -0.28, 16, 24, C_PAW, true));
+    var meshThigh  = createMesh(generateSphere(0.16, B_THIGH, 0.16, 24, 24, C_LIMB));
+    var meshShin  = createMesh(generateEllipticParaboloid(0.14, 0.14, B_FARM, 20, 24, C_LIMB, false));
+    var meshJoint  = createMesh(generateSphere(0.16, 0.16, 0.16, 20, 20, C_LIMB));
 
-    var meshWing   = createMesh(generateEllipticParaboloid(0.55, 1.20, 0.40, 16, 32, C_WING, false));
+    var meshWing   = createMesh(generateEllipticParaboloid(0.45, 0.12, 3, 24, 32, C_WING, false));
 
     // antena = kurva Bezier (4 titik kontrol); s = -1 kiri, +1 kanan
     var headAntenna = function (s) {
@@ -481,8 +479,8 @@ function main() {
         var tz = HEAD.c * Math.sqrt(Math.max(1 - tx * tx / (HEAD.a * HEAD.a) - ty * ty / (HEAD.b * HEAD.b), 0)) ;
 
         var d = normalize3([-0.7 * Math.cos(th), -0.7 * Math.sin(th), 0.7]);
-        var gam = Math.asin(d[2]);
-        var phi = Math.atan2(-d[0], d[1]);
+        var gam = Math.PI/4;
+        var phi = Math.atan2(Math.cos(th), -Math.sin(th));
 
         var Tooth = newObj(k % 2 == 0 ? meshToothA : meshToothB);
         var temp = LIBS.get_I4();
@@ -512,11 +510,38 @@ function main() {
     Head.childs.push(HAntL);
     Head.childs.push(HAntR);
 
-    var BAntL = newObj(meshBAntL), BAntR = newObj(meshBAntR);
-    place(BAntL, -0.50, 1.05, -0.85);
-    place(BAntR, 0.50, 1.05, -0.85);
-    Body.childs.push(BAntL);
-    Body.childs.push(BAntR);
+    // Tiga pasang antena belakang: atas, tengah, dan bawah.
+    var backAntennaPairs = [
+        { x: 0.50, y: 1.05, z: -0.52 },
+        { x: 0.55, y: 0.35, z: -0.74 },
+        { x: 0.42, y: -0.55, z: -0.80 }
+    ];
+    for (var i = 0; i < backAntennaPairs.length; i++) {
+        var pair = backAntennaPairs[i];
+        var BAntL = newObj(meshBAntL), BAntR = newObj(meshBAntR);
+        place(BAntL, -pair.x, pair.y, pair.z);
+        place(BAntR, pair.x, pair.y, pair.z);
+        Body.childs.push(BAntL);
+        Body.childs.push(BAntR);
+    }
+
+    var makeWing = function (side, slope) {
+        var Wing = newObj(meshWing);
+        var rootX = side * 0.55;
+        var rootY = 0.40;
+        var tipX = side * 3.30;
+        var tipY = slope * 1.40;
+        var dx = rootX - tipX;
+        var dy = rootY - tipY;
+        LIBS.rotateZ(Wing.POSITION_MATRIX, Math.atan2(-dx, dy));
+        LIBS.rotateY(Wing.POSITION_MATRIX, side * 0.5);
+        place(Wing, tipX, tipY, -1.6);
+        Body.childs.push(Wing);
+    };
+    makeWing(-1, 1);
+    makeWing(1, 1);
+    makeWing(-1, -1);
+    makeWing(1, -1);
 
     var makeArm = function (side) {
         var Shoulder = newObj(null);
@@ -535,12 +560,42 @@ function main() {
         LIBS.rotateY(Elbow.POSITION_MATRIX, side * 5);
         Shoulder.childs.push(Elbow);
 
+        var ElbowJoint = newObj(meshJoint);
+        Elbow.childs.push(ElbowJoint);
+
         var FArm = newObj(meshFArm);
         LIBS.translateY(FArm.POSITION_MATRIX, -B_FARM);
         Elbow.childs.push(FArm);
     };
     makeArm(-1);
     makeArm(1);
+
+    var makeLeg = function (side) {
+        var Hip = newObj(null);
+        LIBS.rotateX(Hip.POSITION_MATRIX, 0.08);
+        LIBS.rotateZ(Hip.POSITION_MATRIX, side * 2.1);
+        place(Hip, side * 0.52, -0.90, 0.05);
+        Body.childs.push(Hip);
+
+        var Thigh = newObj(meshThigh);
+        LIBS.translateY(Thigh.POSITION_MATRIX, -B_THIGH);
+        Hip.childs.push(Thigh);
+
+        var Knee = newObj(null);
+        LIBS.translateY(Knee.POSITION_MATRIX, -2 * B_THIGH);
+        LIBS.rotateZ(Knee.POSITION_MATRIX, side * -1.8);
+        LIBS.rotateX(Knee.POSITION_MATRIX, 0.25);
+        Hip.childs.push(Knee);
+
+        var KneeJoint = newObj(meshJoint);
+        Knee.childs.push(KneeJoint);
+
+        var Foot = newObj(meshShin);
+        LIBS.translateY(Foot.POSITION_MATRIX, -B_FARM);
+        Knee.childs.push(Foot);
+    };
+    makeLeg(-1);
+    makeLeg(1);
 
     /*======================== MOUSE CAMERA & CONTROL ======================== */
     var PROJMATRIX = LIBS.get_projection(40, CANVAS.width / CANVAS.height, 1, 100);
