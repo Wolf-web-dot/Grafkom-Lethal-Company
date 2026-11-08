@@ -154,6 +154,10 @@ export function createCoilHead(
 
     // ================= TANGAN =================
 
+    // sendi yang dipakai animasi (RunAnimation.js)
+    const ARMS = [];
+    const LEGS = [];
+
     function makeArm(side) {
         const shoulder = add(
             mk().ellipsoid(C.skin, 0.16, 0.15, 0.16),
@@ -183,6 +187,7 @@ export function createCoilHead(
 
         stain(upper, C.blood, 0, -0.35, 0.095, 0.04, 0.10, 0.03);
 
+        ARMS.push({ side, shoulder, fore });
         return shoulder;
     }
 
@@ -226,6 +231,7 @@ export function createCoilHead(
         stain(thigh, C.blood, -side * 0.05, -0.45, 0.175, 0.06, 0.12, 0.03);
         stain(shin, C.stain, 0.02, -0.55, 0.115, 0.05, 0.14, 0.03);
 
+        LEGS.push({ side, thigh, shin });
         return thigh;
     }
 
@@ -257,7 +263,9 @@ export function createCoilHead(
         spring,
         head,
         armR,
-        armL
+        armL,
+        arms: ARMS,
+        legs: LEGS
     };
 
 }

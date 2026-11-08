@@ -257,7 +257,7 @@ export function createHoardingBug(
     var C_EYE   = [0.55, 0.19, 0.17];
     var C_TOOTH = [0.68, 0.63, 0.54];
     var C_LIMB  = [0.30, 0.25, 0.20];
-    var C_WING  = [0.40, 0.70, 0.90];
+    var C_WING  = [160 / 255, 160 / 255, 160 / 255];   // #A0A0A0 (abu-abu)
     var C_ANT   = [0.10, 0.08, 0.06];
 
 
@@ -479,6 +479,9 @@ export function createHoardingBug(
         Body.childs.push(BAntR);
     }
 
+    // sendi yang dipakai animasi (RunAnimation.js)
+    var WINGS = [], ARMS = [], LEGS = [];
+
     // ================= SAYAP =================
 
     var makeWing = function (side, slope) {
@@ -505,6 +508,7 @@ export function createHoardingBug(
 
         place(Wing, tipX, tipY, -1.6);
         Body.childs.push(Wing);
+        WINGS.push({ side: side, wing: Wing });
     };
 
     makeWing(-1, 1);
@@ -541,6 +545,8 @@ export function createHoardingBug(
         var FArm = newObj(meshFArm);
         LIBS.translateY(FArm.POSITION_MATRIX, -B_FARM);
         Elbow.childs.push(FArm);
+
+        ARMS.push({ side: side, shoulder: Shoulder, elbow: Elbow });
     };
 
     makeArm(-1);
@@ -575,6 +581,8 @@ export function createHoardingBug(
         var Foot = newObj(meshShin);
         LIBS.translateY(Foot.POSITION_MATRIX, -B_FARM);
         Knee.childs.push(Foot);
+
+        LEGS.push({ side: side, hip: Hip, knee: Knee });
     };
 
     makeLeg(-1);
@@ -583,6 +591,11 @@ export function createHoardingBug(
     // ================= SELESAI =================
 
     return {
-        root: Root
+        root: Root,
+        body: Body,
+        head: Head,
+        wings: WINGS,
+        arms: ARMS,
+        legs: LEGS
     };
 }

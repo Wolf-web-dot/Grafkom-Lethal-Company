@@ -1013,6 +1013,7 @@ export function createNutCracker(
         buildArm(1, handRight);
     
         // ---- kaki: sendi pinggul -> lutut -> sepatu ----
+        var LEGS = [];   // sendi yang dipakai animasi (RunAnimation.js)
         function buildLeg(side, hipX, hipSwing, hipSide, kneeBend) {
             var Hip = attach(Body, meshHip, hipX, -0.85, 0);
             attach(Hip, meshThigh, 0, -0.70, 0);
@@ -1025,6 +1026,7 @@ export function createNutCracker(
             LIBS.rotateX(Hip.POSITION_MATRIX, hipSwing);
             LIBS.rotateZ(Hip.POSITION_MATRIX, hipSide);
             LIBS.rotateX(Knee.POSITION_MATRIX, kneeBend);
+            LEGS.push({ side: side, hip: Hip, knee: Knee });
         }
     
         // kedua kaki berdiri lurus, telapak menapak, sedikit terbuka ke samping
@@ -1043,6 +1045,9 @@ export function createNutCracker(
         }
 
         return {
-            root: Body
+            root: Body,
+            head: Head,
+            gun: Gun,
+            legs: LEGS
         };
 }

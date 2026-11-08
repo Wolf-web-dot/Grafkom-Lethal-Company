@@ -1,6 +1,8 @@
 import { createCoilHead } from "./CoilHead.js";
 import { createHoardingBug } from "./HoardingBug.js";
 import { createNutCracker } from "./NutCracker.js";
+import { createEnvironment } from "./Environment.js";
+import { animateScenes } from "./Runanimation.js";
 
 function main() {
     const CANVAS = document.getElementById("mycanvas");
@@ -119,6 +121,17 @@ function main() {
     GL.enableVertexAttribArray(1);
     GL.enableVertexAttribArray(2);
 
+    // lorong pipa (pakai shader texture, sama seperti Hoarding Bug)
+    const environment = createEnvironment(
+        GL,
+        textureProgram,
+        textureLocations.position,
+        textureLocations.color,
+        textureLocations.model,
+        textureLocations.uv,
+        textureLocations.sampler
+    );
+
     const coil = createCoilHead(
         GL,
         colorProgram,
@@ -148,11 +161,11 @@ function main() {
     );
 
     LIBS.set_position(coil.root.POSITION_MATRIX, -4.2, -1.0, 0);
-    LIBS.set_position(hoardingBug.root.POSITION_MATRIX, 0, -0.5, 0);
+    LIBS.set_position(hoardingBug.root.POSITION_MATRIX, 0, -4.7, 0);
     LIBS.scaleX(hoardingBug.root.POSITION_MATRIX, 0.65);
     LIBS.scaleY(hoardingBug.root.POSITION_MATRIX, 0.65);
     LIBS.scaleZ(hoardingBug.root.POSITION_MATRIX, 0.65);
-    LIBS.set_position(nutCracker.root.POSITION_MATRIX, 4.2, -0.7, 0);
+    LIBS.set_position(nutCracker.root.POSITION_MATRIX, 4.2, -1.75, 0);
 
     const VIEWMATRIX = LIBS.get_I4();
     LIBS.translateZ(VIEWMATRIX, -18);
@@ -178,7 +191,7 @@ function main() {
 
     GL.enable(GL.DEPTH_TEST);
     GL.depthFunc(GL.LEQUAL);
-    GL.clearColor(0.12, 0.12, 0.12, 1.0);
+    GL.clearColor(0.02, 0.02, 0.02, 1.0);
     GL.clearDepth(1.0);
 
     function render(time) {
@@ -189,12 +202,9 @@ function main() {
             1,
             100
         );
-        LIBS.set_I4(coil.root.MOVE_MATRIX);
-        LIBS.rotateY(coil.root.MOVE_MATRIX, time * 0.00025);
-        LIBS.set_I4(hoardingBug.root.MOVE_MATRIX);
-        LIBS.rotateY(hoardingBug.root.MOVE_MATRIX, -time * 0.00018);
-        LIBS.set_I4(nutCracker.root.MOVE_MATRIX);
-        LIBS.rotateY(nutCracker.root.MOVE_MATRIX, Math.sin(time * 0.0004) * 0.08);
+        // scene kejar-kejaran (Scene 1, 2, 3A, 3B lalu diulang)
+        const t = time * 0.001;   // milidetik -> detik
+        animateScenes(coil, hoardingBug, nutCracker, t);
 
         GL.viewport(0, 0, CANVAS.width, CANVAS.height);
         GL.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
@@ -203,6 +213,7 @@ function main() {
         coil.root.render(LIBS.get_I4());
 
         setCommonUniforms(textureProgram, textureLocations, projection);
+        environment.root.render(LIBS.get_I4());
         hoardingBug.root.render(LIBS.get_I4());
         nutCracker.root.render(LIBS.get_I4());
 
