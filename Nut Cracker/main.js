@@ -1,7 +1,6 @@
 import { MyObject } from "./MyObject.js";
 
-// ==========================================================
-// DAFTAR BENTUK (sesuai proposal)
+// Daftar Bentuk:
 //   Topi     : Cylinder, Cone
 //   Kepala   : Sphere
 //   Badan    : Ellipsoid
@@ -10,7 +9,6 @@ import { MyObject } from "./MyObject.js";
 //   Sepatu   : Ellipsoid, Hyperboloid 2 sheet
 //   Aksesori : Kubus, Elliptic paraboloid
 //   Senjata  : Cylinder, Bezier curve, Kubus
-// ==========================================================
 
 var FACE_IMAGE = "";
 
@@ -1191,7 +1189,7 @@ function main() {
 
         // kepala miring pelan; topi ikut karena child
         LIBS.set_I4(Head.MOVE_MATRIX);
-        LIBS.rotateZ(Head.MOVE_MATRIX, Math.sin(time * 0.002) * 0.08);
+        //LIBS.rotateZ(Head.MOVE_MATRIX, Math.sin(time * 0.002) * 0.08);
 
         GL.uniformMatrix4fv(_Pmatrix, false, PROJMATRIX);
         GL.uniformMatrix4fv(_Vmatrix, false, VIEWMATRIX);
