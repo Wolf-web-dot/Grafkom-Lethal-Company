@@ -301,8 +301,6 @@ export function createHoardingBug(
 
 
     /*======================== MESH (VBO & EBO) ======================== */
-    // createMesh(geo)            -> mesh tanpa gambar (texture putih)
-    // createMesh(geo, "ini.png") -> mesh dengan texture gambar
     var createMesh = function (geo, imageSrc) {
         var OBJECT_VERTEX = GL.createBuffer();
         GL.bindBuffer(GL.ARRAY_BUFFER, OBJECT_VERTEX);
@@ -354,9 +352,6 @@ export function createHoardingBug(
     var meshBAntL = backAntenna(-1), meshBAntR = backAntenna(1);
 
 
-
-    // MyObject.js selalu menggambar mesh-nya, jadi sendi (joint) diberi mesh kosong
-    // (1 segitiga degenerate = tidak terlihat)
     var meshEmpty  = createMesh({ vertices: [0, 0, 0, 0, 0, 0, 0, 0], faces: [0, 0, 0] });
 
 
