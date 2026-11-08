@@ -112,6 +112,33 @@ var LIBS = {
         m[10] *= t;
     },
     
+    // ROTATE ARBITRARY AXIS
+    // Matriks rotasi sebesar `angle` (radian) terhadap sumbu sembarang yang
+    // melewati titik `point` [px, py, pz] dengan arah `dir` [dx, dy, dz].
+    // Langkah: geser titik ke origin (T) -> putar terhadap sumbu lewat origin
+    // (rumus Rodrigues) -> geser kembali (T^-1).
+    // Konvensi library ini vektor baris (p' = p * M), jadi M = T(-P) * R * T(P).
+    get_rotation_arbitrary: function (point, dir, angle) {
+        var len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]) || 1;
+        var x = dir[0] / len, y = dir[1] / len, z = dir[2] / len;
+        var c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+
+        // Rodrigues (bentuk kolom) R, disimpan transpose untuk vektor baris
+        var R = [
+            t * x * x + c,     t * x * y + s * z, t * x * z - s * y, 0,
+            t * x * y - s * z, t * y * y + c,     t * y * z + s * x, 0,
+            t * x * z + s * y, t * y * z - s * x, t * z * z + c,     0,
+            0,                 0,                 0,                 1
+        ];
+
+        var toOrigin = this.get_I4();
+        this.set_position(toOrigin, -point[0], -point[1], -point[2]);
+        var back = this.get_I4();
+        this.set_position(back, point[0], point[1], point[2]);
+
+        return this.multiply(this.multiply(toOrigin, R), back);
+    },
+
     multiply: function (m1, m2) {
         var rm = this.get_I4();
         var N = 4;

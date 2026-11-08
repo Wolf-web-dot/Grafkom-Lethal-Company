@@ -1,4 +1,4 @@
-/*
+/* =====================================================================
    ANIMASI SCENE KEJAR-KEJARAN DI PEREMPATAN
 
    Scene 1 : urutan kiri->kanan = Coil Head, Hoarding Bug, Nutcracker
@@ -9,8 +9,9 @@
              lari dari kanan ke kiri, mengerem & berhenti di tengah
              perempatan, Nutcracker menoleh ke belakang & kaget
              (baru sadar mangsanya ada di belakangnya)
-   Scene 3B: semua berbalik badan, Nutcracker mengejar Hoarding Bug
-             dan Coil Head ke kanan
+   Scene 3B: semua berbalik badan, Hoarding Bug dan Coil Head mengecil
+             1.5x (seperti tikus kecil) lalu kabur ke kanan,
+             dikejar Nutcracker
    Setelah scene 3B, timeline diulang dari scene 1.
 
    Cara kerja:
@@ -22,13 +23,13 @@
    Arah rotasi dengan LIBS (bagian yang menjulur ke -Y):
    - rotateX(+a) -> ujungnya bergerak ke belakang (-Z)
    - rotateX(-a) -> ujungnya bergerak ke depan   (+Z)
-*/
+   ===================================================================== */
 
 // arah hadap (rotasi Y root): model aslinya menghadap +Z (ke kamera)
 const FACE_LEFT = -Math.PI / 2;
 const FACE_RIGHT = Math.PI / 2;
 
-// PENGATURAN
+// ---------------- PENGATURAN ----------------
 const LANE_Z = -2.75;      // garis lari: tengah perempatan (CROSS_Z0 = 1, CROSS_Z1 = -6.5)
 const SPEED = 6.0;         // kecepatan lari (unit per detik)
 const SPACING = 4.5;       // jarak antar karakter yang berurutan
@@ -50,7 +51,13 @@ const BUG_FLY_Y = -1.7;    // Hoarding Bug terbang setinggi dada
 // jadi saat melambat langkahnya ikut melambat)
 const STRIDE = { coil: 1.5, nut: 1.42 };
 
-// HELPER MATRIX
+// Scene 3B: buruan mengecil 1.5x saat kabur
+const SHRINK = 1 / 1.5;
+// jarak root Coil Head (dada) ke telapak kaki; dipakai supaya kaki tetap
+// menapak lantai saat mengecil (skala terjadi di sekitar root)
+const COIL_ROOT_TO_FEET = 4.71;
+
+/* ================= HELPER MATRIX ================= */
 
 // isi MOVE_MATRIX: identitas lalu rotasi X, Y, Z, lalu translasi
 function pose(obj, rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0) {
@@ -64,19 +71,33 @@ function pose(obj, rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0) {
     LIBS.translateZ(m, tz);
 }
 
-// rotasi X di sekitar titik pivot (px, py, pz) lokal:
-// geser pivot ke titik asal -> putar -> geser kembali
-function rotateAround(obj, px, py, pz, rx) {
-    const toOrigin = LIBS.get_I4();
-    LIBS.set_position(toOrigin, -px, -py, -pz);
-    const rot = LIBS.get_I4();
-    LIBS.rotateX(rot, rx);
-    const back = LIBS.get_I4();
-    LIBS.set_position(back, px, py, pz);
-    obj.MOVE_MATRIX = LIBS.multiply(LIBS.multiply(toOrigin, rot), back);
+// seperti pose(), tapi diawali skala seragam (dipakai root yang mengecil).
+// skala dibuat di matriks identitas dulu, baru diputar, karena
+// LIBS.scaleX/Y/Z hanya mengalikan elemen diagonal (salah bila sudah diputar)
+function poseScaled(obj, scale, rx = 0, ry = 0, rz = 0, ty = 0) {
+    const m = obj.MOVE_MATRIX;
+    LIBS.set_I4(m);
+    m[0] = m[5] = m[10] = scale;
+    if (rx) LIBS.rotateX(m, rx);
+    if (ry) LIBS.rotateY(m, ry);
+    if (rz) LIBS.rotateZ(m, rz);
+    LIBS.translateY(m, ty);
 }
 
-// HELPER GERAK
+// ROTATE ARBITRARY AXIS untuk kepakan sayap Hoarding Bug.
+// Engsel sayap: sumbu yang melewati pangkal sayap (0, 3, 0) lokal
+// (ujung sayap ada di titik asal) dengan arah miring (1, 0, 0.6).
+// Karena sumbunya miring, sayap tidak hanya naik-turun tetapi juga
+// sedikit menyapu maju-mundur, seperti kepakan serangga.
+// Rumusnya ada di LIBS.get_rotation_arbitrary (libs.js).
+const WING_PIVOT = [0, 3.0, 0];
+const WING_AXIS = [1, 0, 0.6];
+
+function flapWing(wing, angle) {
+    wing.MOVE_MATRIX = LIBS.get_rotation_arbitrary(WING_PIVOT, WING_AXIS, angle);
+}
+
+/* ================= HELPER GERAK ================= */
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
@@ -107,10 +128,8 @@ const travelTime = (dist, accelD = 0, decelD = 0) =>
 const legPhase = (phase, side) => phase + (side > 0 ? 0 : Math.PI);
 const kneeBend = (p, base, amp) => base + amp * Math.max(0, Math.sin(p + 0.6));
 
-/* 
-GERAKAN TIAP KARAKTER
-st = { x, face, phase, run (0 = berdiri, 1 = lari penuh), headYaw, hop } 
-*/
+/* ================= GERAKAN TIAP KARAKTER =================
+   st = { x, face, phase, run (0 = berdiri, 1 = lari penuh), headYaw, hop } */
 
 function poseCoilHead(coil, st, t) {
     const k = st.run;
@@ -130,8 +149,11 @@ function poseCoilHead(coil, st, t) {
         k * Math.sin(st.phase) * 0.07);
 
     const bob = k * Math.abs(Math.sin(st.phase)) * 0.25 + (st.hop || 0);
-    LIBS.set_position(coil.root.POSITION_MATRIX, st.x, GROUND.coil, LANE_Z);
-    pose(coil.root, 0.15 * k, st.face, 0, 0, bob, 0);
+    const sc = st.scale || 1;
+    // turunkan root supaya kaki tetap di lantai saat mengecil
+    const y = GROUND.coil - COIL_ROOT_TO_FEET * (1 - sc);
+    LIBS.set_position(coil.root.POSITION_MATRIX, st.x, y, LANE_Z);
+    poseScaled(coil.root, sc, 0.15 * k, st.face, 0, bob * sc);
 }
 
 function poseHoardingBug(bug, st, t) {
@@ -139,9 +161,9 @@ function poseHoardingBug(bug, st, t) {
     const flap = t * 22.0;     // sayap selalu mengepak (terbang)
     const hover = t * 3.0;
 
-    // sayap berpangkal di (0, 3, 0) lokal (ujung sayap ada di titik asal)
+    // sayap mengepak dengan rotasi terhadap sumbu sembarang (engsel sayap)
     bug.wings.forEach(({ wing }, i) => {
-        rotateAround(wing, 0, 3.0, 0, Math.sin(flap + (i % 2) * 0.5) * 0.55);
+        flapWing(wing, Math.sin(flap + (i % 2) * 0.5) * 0.55);
     });
     bug.legs.forEach(({ side, hip, knee }) => {
         const p = legPhase(hover * 1.3, side);
@@ -155,8 +177,9 @@ function poseHoardingBug(bug, st, t) {
     pose(bug.body, 0, 0, Math.sin(hover) * 0.06);
 
     const bob = Math.sin(hover) * 0.4 + (st.hop || 0);
+    const sc = st.scale || 1;
     LIBS.set_position(bug.root.POSITION_MATRIX, st.x, BUG_FLY_Y, LANE_Z);
-    pose(bug.root, 0.08 + 0.22 * k, st.face, 0, 0, bob, 0);   // condong ke depan saat melaju
+    poseScaled(bug.root, sc, 0.08 + 0.22 * k, st.face, 0, bob);   // condong ke depan saat melaju
 }
 
 function poseNutCracker(nut, st) {
@@ -174,10 +197,8 @@ function poseNutCracker(nut, st) {
     pose(nut.root, 0.12 * k, st.face, k * Math.sin(st.phase) * 0.03, 0, bob, 0);
 }
 
-/* 
-SCENE
-Tiap scene menghasilkan state untuk { coil, bug, nut } pada waktu tau. 
-*/
+/* ================= SCENE =================
+   Tiap scene menghasilkan state untuk { coil, bug, nut } pada waktu tau. */
 
 // rombongan lari melintas penuh (masuk dari satu sisi, keluar di sisi lain)
 // order = urutan nama dari KIRI ke KANAN, dir = -1 (ke kiri) / +1 (ke kanan)
@@ -268,12 +289,16 @@ function scene3B() {
             order.forEach((name, i) => {
                 const u = smooth((tau - turnStart[name]) / TURN);
                 const { s, v } = travel(tau - runStart[name], dist, ACCEL);
+                // buruan mengecil 1.5x bersamaan dengan berbalik badan
+                const scale = name === "nut" ? 1 : lerp(1, SHRINK, u);
                 out[name] = {
                     x: startLeft + i * SPACING + s,
                     // berputar lewat menghadap kamera (0)
                     face: lerp(FACE_LEFT, FACE_RIGHT, u),
-                    phase: s * (STRIDE[name] || 1.5),
-                    run: tau < runStart[name] ? 0 : v
+                    // badan kecil -> langkah lebih rapat (lari kecil seperti tikus)
+                    phase: (s * (STRIDE[name] || 1.5)) / scale,
+                    run: tau < runStart[name] ? 0 : v,
+                    scale
                 };
             });
             // kepala Nutcracker kembali menghadap depan saat berbalik
@@ -291,7 +316,7 @@ const SCENES = [
 ];
 const TOTAL = SCENES.reduce((sum, sc) => sum + sc.duration, 0);
 
-// DIPANGGIL DARI main.js
+/* ================= DIPANGGIL DARI main.js ================= */
 // t = waktu dalam detik; mengembalikan nama scene yang sedang berjalan
 export function animateScenes(coil, bug, nut, t) {
     let tau = t % TOTAL;
