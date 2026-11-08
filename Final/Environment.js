@@ -1,6 +1,6 @@
 import { MyObject } from "./MyObjectTexture.js";
 
-/* =====================================================================
+/*
    ENVIRONMENT : lorong pipa Facility (Lethal Company)
 
    Mengikuti referensi game:
@@ -14,9 +14,9 @@ import { MyObject } from "./MyObjectTexture.js";
    - texture (bata, beton, logam) digambar sendiri di canvas
    - warna vertex = warna dasar * cahaya yang "dipanggang" (baked)
    Semua geometri dibuat langsung di koordinat dunia.
-   ===================================================================== */
+*/
 
-// ---------------- UKURAN LORONG ----------------
+// UKURAN LORONG
 const FLOOR_Y = -5.75;     // telapak kaki monster
 const CEIL_Y = 2.6;        // langit-langit rendah
 const HALF_W = 6.6;        // dinding di x = -6.6 dan x = +6.6
@@ -28,17 +28,17 @@ const CROSS_Z0 = 1.0;      // sisi dekat perempatan
 const CROSS_Z1 = -6.5;    // sisi jauh perempatan
 const SIDE_LEN = 10.0;     // panjang lorong samping (kiri & kanan)
 
-// ---------------- UKURAN PIPA ----------------
+// UKURAN PIPA
 // skala: Coil Head ±6.4 unit ≈ 2 m  ->  1 unit ≈ 0.31 m
 // diameter (inch) ≈ radius * 2 * 0.31 / 0.0254  ≈ radius * 24.6
 const PIPE = {
-    big:    0.20,   // ±4.9 inch  (pipa kiri ke kotak sambungan)
-    main:   0.18,   // ±4.4 inch  (pipa pojok kanan, pipa ujung)
-    medium: 0.16,   // ±3.9 inch  (pipa katup, pipa lorong samping)
-    small:  0.14    // ±3.4 inch  (pipa penyeberang, pipa ujung kedua)
+    big:    0.20,   // +-4.9 inch  (pipa kiri ke kotak sambungan)
+    main:   0.18,   // +-4.4 inch  (pipa pojok kanan, pipa ujung)
+    medium: 0.16,   // +-3.9 inch  (pipa katup, pipa lorong samping)
+    small:  0.14    // +-3.4 inch  (pipa penyeberang, pipa ujung kedua)
 };
 
-// ---------------- WARNA DASAR (dikali texture) ----------------
+// WARNA DASAR (dikali texture)
 const C = {
     brick:    [0.80, 0.80, 0.78],
     concrete: [0.75, 0.74, 0.72],
@@ -50,7 +50,7 @@ const C = {
     lamp:     [1.00, 0.96, 0.85]
 };
 
-/* ================= PENCAHAYAAN (dipanggang ke warna vertex) ================= */
+// PENCAHAYAAN (dipanggang ke warna vertex)
 const AMBIENT = 0.035;
 
 // senter pemain (spot light dari arah kamera)
@@ -101,7 +101,7 @@ function bake(color, x, y, z, nx, ny, nz) {
     ];
 }
 
-/* ================= MATH KECIL ================= */
+// MATH KECIL
 function norm(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
 function smooth(e0, e1, x) { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -118,7 +118,7 @@ function makeRandom(seed) {
     };
 }
 
-/* ================= TEXTURE PROSEDURAL (canvas) ================= */
+// TEXTURE PROSEDURAL (canvas)
 function makeCanvas(size) {
     const cv = document.createElement("canvas");
     cv.width = cv.height = size;
@@ -229,9 +229,7 @@ function makeTexture(GL, canvas) {
     return tex;
 }
 
-/* =====================================================================
-   Geometri: vertex = posisi(3) + warna(3) + uv(2)  (format MyObjectTexture)
-   ===================================================================== */
+// Geometri: vertex = posisi(3) + warna(3) + uv(2)  (format MyObjectTexture)
 class Geo {
     constructor(texScale) {
         this.vertices = [];
@@ -370,9 +368,7 @@ class Geo {
     }
 }
 
-/* =====================================================================
-   createEnvironment  (parameter sama seperti createHoardingBug)
-   ===================================================================== */
+// createEnvironment  (parameter sama seperti createHoardingBug)
 export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatrix, _uv, _sampler) {
 
     const TEX = {
@@ -388,11 +384,11 @@ export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatri
 
     const LEN = Z_NEAR - Z_END;
 
-    /* ---------------- LANTAI & LANGIT-LANGIT ---------------- */
+    //LANTAI & LANGIT-LANGIT
     concrete.quad(C.concrete, [-HALF_W, FLOOR_Y, Z_NEAR], [2 * HALF_W, 0, 0], [0, 0, -LEN], [0, 1, 0], 0.7);
     concrete.quad(C.ceiling, [-HALF_W, CEIL_Y, Z_NEAR], [2 * HALF_W, 0, 0], [0, 0, -LEN], [0, -1, 0], 0.8);
 
-    /* ---------------- DINDING BATA (terbuka di perempatan) ---------------- */
+    //DINDING BATA (terbuka di perempatan)
     const H = CEIL_Y - FLOOR_Y;
     [-1, 1].forEach(sd => {
         const x = sd * HALF_W, n = [-sd, 0, 0];
@@ -402,7 +398,7 @@ export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatri
     // dinding ujung
     brick.quad(C.brick, [-HALF_W, FLOOR_Y, Z_END], [2 * HALF_W, 0, 0], [0, H, 0], [0, 0, 1], 0.6);
 
-    /* ---------------- LORONG SAMPING KIRI & KANAN ---------------- */
+    //LORONG SAMPING KIRI & KANAN
     [-1, 1].forEach(sd => {
         const xi = sd * HALF_W, xo = sd * (HALF_W + SIDE_LEN), w = xo - xi, dz = CROSS_Z1 - CROSS_Z0;
         concrete.quad(C.concrete, [xi, FLOOR_Y, CROSS_Z0], [w, 0, 0], [0, 0, dz], [0, 1, 0], 0.7);
@@ -419,7 +415,7 @@ export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatri
         }
     });
 
-    /* ---------------- RANGKA BESI LANGIT-LANGIT ---------------- */
+    //RANGKA BESI LANGIT-LANGIT
     // rel di pojok atas, terputus di perempatan
     [-1, 1].forEach(sd => {
         const x = sd * (HALF_W - 0.25);
@@ -434,14 +430,14 @@ export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatri
         metal.box(C.steel, [-HALF_W, CEIL_Y - 0.28, z - 0.04], [HALF_W, CEIL_Y, z + 0.04]);
     }
 
-    /* ---------------- LAMPU LANGIT-LANGIT ---------------- */
+    //LAMPU LANGIT-LANGIT
     LAMPS.forEach(L => {
         const [x, , z] = L.p;
         metal.box(C.steel, [x - 0.9, CEIL_Y - 0.25, z - 0.35], [x + 0.9, CEIL_Y, z + 0.35]);
         metal.box(C.lamp, [x - 0.75, CEIL_Y - 0.3, z - 0.22], [x + 0.75, CEIL_Y - 0.25, z + 0.22], 2, true);
     });
 
-    /* ---------------- PIPA TEMBAGA ---------------- */
+    //PIPA TEMBAGA
     const Y_TOP = CEIL_Y - 0.75;
 
     // 1) pipa di pojok kanan atas, lalu belok masuk ke lorong samping kanan
@@ -525,7 +521,7 @@ export function createEnvironment(GL, SHADER_PROGRAM, _position, _color, _Mmatri
         if (z > -10) metal.box(C.steel, [-HALF_W + 0.65, Y_TOP + 0.1, z - 0.05], [-HALF_W + 0.95, CEIL_Y, z + 0.05]);
     }
 
-    /* ---------------- KE GPU (pakai MyObject dari MyObjectTexture.js) ---------------- */
+    //KE GPU (pakai MyObject dari MyObjectTexture.js)
     const groups = [[concrete, TEX.concrete], [brick, TEX.brick], [metal, TEX.metal]];
     const objects = [];
 
