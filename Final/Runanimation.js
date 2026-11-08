@@ -1,4 +1,4 @@
-/* =====================================================================
+/*
    ANIMASI SCENE KEJAR-KEJARAN DI PEREMPATAN
 
    Scene 1 : urutan kiri->kanan = Coil Head, Hoarding Bug, Nutcracker
@@ -22,13 +22,13 @@
    Arah rotasi dengan LIBS (bagian yang menjulur ke -Y):
    - rotateX(+a) -> ujungnya bergerak ke belakang (-Z)
    - rotateX(-a) -> ujungnya bergerak ke depan   (+Z)
-   ===================================================================== */
+*/
 
 // arah hadap (rotasi Y root): model aslinya menghadap +Z (ke kamera)
 const FACE_LEFT = -Math.PI / 2;
 const FACE_RIGHT = Math.PI / 2;
 
-// ---------------- PENGATURAN ----------------
+// PENGATURAN
 const LANE_Z = -2.75;      // garis lari: tengah perempatan (CROSS_Z0 = 1, CROSS_Z1 = -6.5)
 const SPEED = 6.0;         // kecepatan lari (unit per detik)
 const SPACING = 4.5;       // jarak antar karakter yang berurutan
@@ -50,7 +50,7 @@ const BUG_FLY_Y = -1.7;    // Hoarding Bug terbang setinggi dada
 // jadi saat melambat langkahnya ikut melambat)
 const STRIDE = { coil: 1.5, nut: 1.42 };
 
-/* ================= HELPER MATRIX ================= */
+// HELPER MATRIX
 
 // isi MOVE_MATRIX: identitas lalu rotasi X, Y, Z, lalu translasi
 function pose(obj, rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0) {
@@ -76,7 +76,7 @@ function rotateAround(obj, px, py, pz, rx) {
     obj.MOVE_MATRIX = LIBS.multiply(LIBS.multiply(toOrigin, rot), back);
 }
 
-/* ================= HELPER GERAK ================= */
+// HELPER GERAK
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
@@ -107,8 +107,10 @@ const travelTime = (dist, accelD = 0, decelD = 0) =>
 const legPhase = (phase, side) => phase + (side > 0 ? 0 : Math.PI);
 const kneeBend = (p, base, amp) => base + amp * Math.max(0, Math.sin(p + 0.6));
 
-/* ================= GERAKAN TIAP KARAKTER =================
-   st = { x, face, phase, run (0 = berdiri, 1 = lari penuh), headYaw, hop } */
+/* 
+GERAKAN TIAP KARAKTER
+st = { x, face, phase, run (0 = berdiri, 1 = lari penuh), headYaw, hop } 
+*/
 
 function poseCoilHead(coil, st, t) {
     const k = st.run;
@@ -172,8 +174,10 @@ function poseNutCracker(nut, st) {
     pose(nut.root, 0.12 * k, st.face, k * Math.sin(st.phase) * 0.03, 0, bob, 0);
 }
 
-/* ================= SCENE =================
-   Tiap scene menghasilkan state untuk { coil, bug, nut } pada waktu tau. */
+/* 
+SCENE
+Tiap scene menghasilkan state untuk { coil, bug, nut } pada waktu tau. 
+*/
 
 // rombongan lari melintas penuh (masuk dari satu sisi, keluar di sisi lain)
 // order = urutan nama dari KIRI ke KANAN, dir = -1 (ke kiri) / +1 (ke kanan)
@@ -287,7 +291,7 @@ const SCENES = [
 ];
 const TOTAL = SCENES.reduce((sum, sc) => sum + sc.duration, 0);
 
-/* ================= DIPANGGIL DARI main.js ================= */
+// DIPANGGIL DARI main.js
 // t = waktu dalam detik; mengembalikan nama scene yang sedang berjalan
 export function animateScenes(coil, bug, nut, t) {
     let tau = t % TOTAL;
