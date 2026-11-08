@@ -229,7 +229,16 @@ function main() {
 
     chest.setup();
 
+    var autoRotation = 0;
+    var previousFrameTime = 0;
+    var AUTO_ROTATION_SPEED = 0.35;
     var animate = function (time) {
+        var deltaTime = previousFrameTime
+            ? Math.min((time - previousFrameTime) / 1000, 0.05)
+            : 0;
+        previousFrameTime = time;
+        autoRotation += AUTO_ROTATION_SPEED * deltaTime;
+
         GL.viewport(0, 0, CANVAS.width, CANVAS.height);
         GL.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
@@ -247,9 +256,9 @@ function main() {
         LIBS.rotateX(armR.MOVE_MATRIX, Math.sin(t * 0.9) * 0.05);
         LIBS.rotateX(armL.MOVE_MATRIX, -Math.sin(t * 0.9) * 0.05);
 
-        // Rotasi seluruh karakter dari input mouse
+        // Rotasi pelan saat idle, ditambah kontrol rotasi dari mouse.
         var SPIN = LIBS.get_I4();
-        LIBS.rotateY(SPIN, THETA);
+        LIBS.rotateY(SPIN, THETA + autoRotation);
         LIBS.rotateX(SPIN, PHI);
 
         GL.uniformMatrix4fv(_Pmatrix, false, PROJMATRIX);

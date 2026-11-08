@@ -383,7 +383,6 @@ function main() {
             GL.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
             GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, image);
             GL.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, false);
-            renderScene();
         };
         image.src = src;
         return texture;
@@ -525,6 +524,7 @@ function main() {
         Body.childs.push(BAntR);
     }
 
+    var WINGS = [];
     var makeWing = function (side, slope) {
         var Wing = newObj(meshWing);
         var rootX = side * 0.55;
@@ -537,6 +537,7 @@ function main() {
         LIBS.rotateY(Wing.POSITION_MATRIX, side * 0.5);
         place(Wing, tipX, tipY, -1.6);
         Body.childs.push(Wing);
+        WINGS.push(Wing);
     };
     makeWing(-1, 1);
     makeWing(1, 1);
@@ -629,7 +630,6 @@ function main() {
         PHI += dY;
         x_prev = e.pageX, y_prev = e.pageY;
         e.preventDefault();
-        renderScene();
     };
 
     CANVAS.addEventListener("mousedown", mouseDown, false);
@@ -655,7 +655,6 @@ function main() {
         else {
             return;
         }
-        renderScene();
     };
 
     window.addEventListener("keydown", keyDown, false);
@@ -666,20 +665,45 @@ function main() {
     GL.clearColor(0.25, 0.25, 0.25, 1.0);
     GL.clearDepth(1.0);
 
-    var renderScene = function () {
+    var rotateAround = function (obj, px, py, pz, angle) {
+        var toOrigin = LIBS.get_I4();
+        LIBS.set_position(toOrigin, -px, -py, -pz);
+
+        var rotation = LIBS.get_I4();
+        LIBS.rotateX(rotation, angle);
+
+        var back = LIBS.get_I4();
+        LIBS.set_position(back, px, py, pz);
+
+        obj.MOVE_MATRIX = LIBS.multiply(
+            LIBS.multiply(toOrigin, rotation),
+            back
+        );
+    };
+
+    var renderScene = function (time) {
+        var seconds = time * 0.001;
+
+        WINGS.forEach(function (wing, i) {
+            var flap = Math.sin(seconds * 22 + (i % 2) * 0.5) * 0.55;
+            rotateAround(wing, 0, 3.0, 0, flap);
+        });
+
         GL.viewport(0, 0, CANVAS.width, CANVAS.height);
         GL.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
         LIBS.set_I4(Root.MOVE_MATRIX);
-        LIBS.rotateY(Root.MOVE_MATRIX, THETA);
+        LIBS.rotateY(Root.MOVE_MATRIX, THETA + seconds * 0.35);
         LIBS.rotateX(Root.MOVE_MATRIX, PHI);
 
         GL.uniformMatrix4fv(_Pmatrix, false, PROJMATRIX);
         GL.uniformMatrix4fv(_Vmatrix, false, VIEWMATRIX);
         Root.render(LIBS.get_I4());
         GL.flush();
+
+        window.requestAnimationFrame(renderScene);
     };
 
-    renderScene();
+    window.requestAnimationFrame(renderScene);
 }
 window.addEventListener('load', main);
