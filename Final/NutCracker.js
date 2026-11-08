@@ -42,9 +42,7 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // ELLIPSOID / SPHERE (dengan UV)
-    // ==========================================
     function generateEllipsoid(a, b, c, stack, step, color) {
         var vertices = [];
         var faces = [];
@@ -84,10 +82,8 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // CYLINDER (sumbu Y, pusat di origin)
     // arcStart/arcEnd (radian): hanya sebagian keliling (tanpa tutup). Depan (+Z) = PI/2
-    // ==========================================
     function generateCylinder(r, h, slices, color, arcStart, arcEnd) {
         var vertices = [];
         var faces = [];
@@ -132,9 +128,7 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // CONE / CONE TERPOTONG (sumbu Y, pusat di origin)
-    // ==========================================
     function generateCone(rBottom, rTop, h, slices, color, zScale) {
         var vertices = [];
         var faces = [];
@@ -179,10 +173,8 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // KUBUS / BALOK (kubus yang diskalakan w x h x d)
     // Orientasi ditentukan oleh tiga sumbu ex, ey, ez (default: sejajar sumbu dunia)
-    // ==========================================
     function generateBox(w, h, d, color, center, ex, ey, ez) {
         center = center || [0, 0, 0];
         ex = ex || [1, 0, 0];
@@ -246,10 +238,8 @@ export function createNutCracker(
         ];
     }
     
-    // ==========================================
     // RANTAI KUBUS menempel di permukaan depan ellipsoid
     // dipakai untuk sabuk silang di dada
-    // ==========================================
     function ellipsoidFrontPoint(a, b, c, k, x, y) {
         var A = a * k, B = b * k, C = c * k;
         var q = 1 - (x / A) * (x / A) - (y / B) * (y / B);
@@ -285,9 +275,7 @@ export function createNutCracker(
         return mergeGeometry(list);
     }
     
-    // ==========================================
     // KANCING KECIL (kubus) yang menempel di atas sabuk pada posisi t (0..1) sepanjang sabuk
-    // ==========================================
     function generateStrapMark(a, b, c, k, x0, y0, x1, y1, t, length, width, thickness, color) {
         var e = 0.01;
         var pA = ellipsoidFrontPoint(a, b, c, k, x0 + (x1 - x0) * (t - e), y0 + (y1 - y0) * (t - e));
@@ -305,9 +293,7 @@ export function createNutCracker(
         return generateBox(length, width, thickness, color, center, ex, ey, ez);
     }
     
-    // ==========================================
     // CINCIN KUBUS mengelilingi badan (ikat pinggang)
-    // ==========================================
     function generateBoxRing(a, c, y, n, w, h, d, color, psiStart, psiEnd) {
         var list = [];
         var partial = (psiStart !== undefined && psiEnd !== undefined);
@@ -325,9 +311,7 @@ export function createNutCracker(
         return mergeGeometry(list);
     }
     
-    // ==========================================
     // TABUNG (cylinder) berderet mengelilingi badan, dipakai untuk peluru
-    // ==========================================
     function generateCylinderRing(a, c, y, n, r, h, slices, color, psiStart, psiEnd) {
         var list = [];
         for (var i = 0; i < n; i++) {
@@ -346,9 +330,7 @@ export function createNutCracker(
         return mergeGeometry(list);
     }
     
-    // ==========================================
     // ELLIPTIC PARABOLOID (kubah): y = h * (1 - x^2/a^2 - z^2/c^2), pusat vertikal di origin
-    // ==========================================
     function generateEllipticParaboloid(a, c, h, stacks, slices, color) {
         var vertices = [];
         var faces = [];
@@ -396,11 +378,9 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // HYPERBOLOID 2 SHEET (lembar atas):
     //   y = c cosh(u), x = a sinh(u) cos(t), z = b sinh(u) sin(t)
     // u dari uMin ke uMax -> bentuk corong yang melebar ke atas (dipakai untuk bibir sepatu)
-    // ==========================================
     function generateHyperboloid2(a, b, c, uMin, uMax, stacks, slices, color) {
         var vertices = [];
         var faces = [];
@@ -439,10 +419,8 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // BEZIER CURVE (kubik) -> tabung yang menyapu sepanjang kurva
     // kurva berada di bidang XY, penampang tabung lingkaran dengan radius r0 -> r1
-    // ==========================================
     function bezierPoint(p0, p1, p2, p3, t) {
         var u = 1 - t;
         var w0 = u * u * u, w1 = 3 * u * u * t, w2 = 3 * u * t * t, w3 = t * t * t;
@@ -527,9 +505,7 @@ export function createNutCracker(
         return { vertices, faces };
     }
     
-    // ==========================================
     // TEXTURE
-    // ==========================================
     function isPowerOf2(n) {
         return (n & (n - 1)) === 0;
     }
@@ -642,9 +618,7 @@ export function createNutCracker(
         return tex;
     }
     
-    // ==========================================
     // TEXTURE BADAN: warna seragam + rahang bawah (mulut) yang digambar
-    // ==========================================
     function drawBodyCanvas() {
         var W = 1024, H = 512;
         var canvas = document.createElement("canvas");
@@ -688,9 +662,7 @@ export function createNutCracker(
         return tex;
     }
     
-    // ==========================================
     // MEMBUAT MESH DAN BUFFER WEBGL
-    // ==========================================
     function createMesh(GL, geometry, texture) {
         var OBJECT_VERTEX = GL.createBuffer();
         GL.bindBuffer(GL.ARRAY_BUFFER, OBJECT_VERTEX);
@@ -715,9 +687,7 @@ export function createNutCracker(
             texture: texture
         };
     }    
-        // ======================================
         // WARNA & TEXTURE
-        // ======================================
         var WHITE = [1.0, 1.0, 1.0];
         var BLACK = [0.06, 0.05, 0.06];
         var GOLD = [0.88, 0.66, 0.20];
@@ -740,9 +710,7 @@ export function createNutCracker(
             return createMesh(GL, geometry, whiteTex);
         }
     
-        // ======================================
         // BADAN: ELLIPSOID (dada) + ELLIPSOID (rok seragam)
-        // ======================================
         var BODY_A = 0.58, BODY_B = 0.92, BODY_C = 0.38;
     
         // badan memakai texture (warna seragam + rahang bawah), jadi warna vertex dibuat putih
@@ -754,9 +722,7 @@ export function createNutCracker(
         // rok seragam: cone terpotong, bawahnya datar dan sedikit melebar
         var meshSkirt = mesh(generateCone(0.62, 0.52, 0.47, 36, RED, 0.70));
     
-        // ======================================
         // AKSESORI: KUBUS + ELLIPTIC PARABOLOID
-        // ======================================
     
         // sabuk silang lebar di dada (rantai kubus mengikuti lengkung badan):
         // X simetris, dari dekat leher sampai pojok ikat pinggang di sisi seberang
@@ -812,18 +778,14 @@ export function createNutCracker(
         // epaulette di bahu (elliptic paraboloid)
         var meshEpaulette = mesh(generateEllipticParaboloid(0.30, 0.26, 0.22, 8, 28, TAN));
     
-        // ======================================
         // KEPALA: SPHERE + texture wajah
-        // ======================================
         var meshHead = createMesh(
             GL,
             generateEllipsoid(0.58, 0.58, 0.58, 40, 40, WHITE),
             faceTex
         );
     
-        // ======================================
         // TOPI: CYLINDER + CONE
-        // ======================================
         var HAT_R = 0.62;
         var meshHat = mesh(generateCylinder(HAT_R, 1.2, 40, BLACK));
         var meshHatTop = mesh(generateCone(HAT_R, 0.56, 0.12, 40, BLACK));
@@ -841,9 +803,7 @@ export function createNutCracker(
             STRIPE_R, STRIPE_T, 20, GOLD, FRONT - SPAN, FRONT + SPAN
         ));
     
-        // ======================================
         // TANGAN: CYLINDER + ELLIPSOID (sendi di bahu & siku)
-        // ======================================
         var L1 = 0.70;   // bahu -> siku
         var L2 = 0.82;   // siku -> pusat tangan
     
@@ -853,9 +813,7 @@ export function createNutCracker(
         var meshForearm = mesh(generateEllipsoid(0.17, 0.39, 0.17, 28, 28, RED));
         var meshHand = mesh(generateEllipsoid(0.18, 0.20, 0.18, 24, 24, SKIN));
     
-        // ======================================
         // SENJATA: CYLINDER + BEZIER CURVE + KUBUS (sumbu panjang = Y lokal)
-        // ======================================
         // double barrel shotgun (sesuai template: laras tebal, cincin kuningan besar, kayu marun)
         var meshGunBreech = mesh(generateCylinder(0.21, 0.30, 28, BRASS));      // cincin kuningan di pangkal laras
         var meshGunBarrel = mesh(generateCylinder(0.088, 1.70, 24, METAL));     // dipakai dua kali (laras kiri & kanan)
@@ -882,17 +840,13 @@ export function createNutCracker(
         // rusuk tipis di alur antara dua laras (kubus)
         var meshGunRib = mesh(generateBox(0.04, 1.55, 0.10, METAL));
     
-        // ======================================
         // KAKI: CYLINDER + ELLIPSOID (sendi di pinggul & lutut)
-        // ======================================
         var meshHip = mesh(generateEllipsoid(0.22, 0.22, 0.22, 20, 20, BLUE));
         var meshThigh = mesh(generateCylinder(0.20, 1.40, 28, BLUE));
         var meshKnee = mesh(generateEllipsoid(0.20, 0.20, 0.20, 20, 20, BLUE));
         var meshShin = mesh(generateEllipsoid(0.19, 0.78, 0.18, 28, 28, BLUE));
     
-        // ======================================
         // SEPATU: ELLIPSOID (telapak) + HYPERBOLOID 2 SHEET (batang sepatu)
-        // ======================================
         var BOOT_A = 0.10;                                  // skala asimptot hyperboloid
         var BOOT_R0 = 0.20, BOOT_R1 = 0.24;                 // radius bawah & atas batang sepatu
         var BOOT_H = 0.50;                                  // tinggi batang sepatu
@@ -905,9 +859,7 @@ export function createNutCracker(
         ));
         var meshBootFoot = mesh(generateEllipsoid(0.22, 0.17, 0.38, 24, 24, BLACK));
     
-        // ======================================
         // HIERARCHICAL OBJECT
-        // ======================================
         function make(m) {
             return new MyObject(
                 GL, SHADER_PROGRAM,
@@ -927,7 +879,7 @@ export function createNutCracker(
     
         var Body = make(meshBody);
     
-        // ---- badan & aksesori ----
+        // badan & aksesori
         attach(Body, meshSkirt, 0, -0.735, 0);
         attach(Body, meshBelt, 0, 0, 0);
         attach(Body, meshBullets, 0, 0, 0);
@@ -936,13 +888,13 @@ export function createNutCracker(
         attach(Body, meshBars, 0, 0, 0);
         attach(Body, meshPins, 0, 0, 0);
     
-        // ---- epaulette (miring ke luar-bawah mengikuti bahu) ----
+        // epaulette (miring ke luar-bawah mengikuti bahu)
         var EpL = attach(Body, meshEpaulette, -0.66, 0.62, 0);
         LIBS.rotateZ(EpL.POSITION_MATRIX, 0.35);
         var EpR = attach(Body, meshEpaulette, 0.66, 0.62, 0);
         LIBS.rotateZ(EpR.POSITION_MATRIX, -0.35);
     
-        // ---- senapan: menyilang di depan badan ----
+        // senapan: menyilang di depan badan
         var GUN_ANGLE = -1.05;                       // rotasi Z (radian)
         var GUN_DIR = [-Math.sin(GUN_ANGLE), Math.cos(GUN_ANGLE)];   // arah panjang senapan di bidang XY
         var GUN_POS = [-0.45, -0.25, 0.70];
@@ -962,7 +914,7 @@ export function createNutCracker(
         attach(Gun, meshGunHammer, -0.14, -0.15, 0.088);
         attach(Gun, meshGunSight, -0.11, 1.65, 0);
     
-        // ---- lengan dengan IK sederhana: kedua tangan memegang senapan ----
+        // lengan dengan IK sederhana: kedua tangan memegang senapan
         function buildArm(side, target) {
             var sx = side * 0.68, sy = 0.46, sz = 0;
     
@@ -1012,7 +964,7 @@ export function createNutCracker(
         buildArm(-1, handLeft);
         buildArm(1, handRight);
     
-        // ---- kaki: sendi pinggul -> lutut -> sepatu ----
+        // kaki: sendi pinggul -> lutut -> sepatu
         var LEGS = [];   // sendi yang dipakai animasi (RunAnimation.js)
         function buildLeg(side, hipX, hipSwing, hipSide, kneeBend) {
             var Hip = attach(Body, meshHip, hipX, -0.85, 0);
@@ -1033,7 +985,7 @@ export function createNutCracker(
         buildLeg(-1, -0.26, 0.0, -0.03, 0.0);
         buildLeg(1, 0.26, 0.0, 0.03, 0.0);
     
-        // ---- kepala & topi ----
+        // kepala & topi
         var Head = attach(Body, meshHead, 0, 1.20, 0);
     
         var Hat = attach(Head, meshHat, 0, 0.88, 0);
